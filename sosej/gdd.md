@@ -273,6 +273,58 @@ NEUTRAL (loop)
 - Custom rules (damage modifiers, stage selection)
 - Friend-only matches
 
+Here's a new section you can add after the "Planned Modes" subsection in **🎪 Game Modes**:
+
+---
+
+### Training Modes
+
+#### **Shadowboxing Lab**
+
+An AI-powered training environment where players face progressively skilled opponents trained via reinforcement learning.
+
+**Core Concept:**
+
+- Practice against AI that learns from player strategies
+- Multiple difficulty tiers based on training iterations
+- Safe environment to experiment with techniques
+
+**AI Training Approach:**
+
+```
+Method: Deep Q-Network (DQN) or similar Q-learning variant
+Training Input States:
+  - Player position & velocity
+  - Player segment positions
+  - Distance to opponent
+  - Current momentum vectors
+  - Health differential
+
+Action Space:
+  - Cursor position adjustments (discretized grid)
+  - Movement patterns (aggressive/defensive/neutral)
+
+Reward Function:
+  - +1.0 for successful hit
+  - +0.5 for building momentum without being hit
+  - -1.0 for taking damage
+  - -0.2 for passive play (encourages engagement)
+```
+
+**Difficulty Tiers:**
+
+- **Tier 1 - Floppy**: 100 training episodes (beginner-friendly)
+- **Tier 2 - Skilled**: 1,000 episodes (understands momentum)
+- **Tier 3 - Master**: 10,000 episodes (advanced techniques)
+- **Tier 4 - AI Champion**: 50,000+ episodes (frame-perfect execution)
+
+**Player Benefits:**
+
+- Learn advanced techniques by observing AI strategies
+- Test character matchups without pressure
+- Track improvement with built-in analytics
+- Unlock insights (e.g., "You're vulnerable to helicopter patterns")
+
 ---
 
 ## 🎲 Procedural Generation System
@@ -488,6 +540,7 @@ function generateBalancedSausage() {
 
 ### Phase 3: Content
 
+- 🔲 Training Mode
 - 🔲 5 new characters
 - 🔲 Procedural sausage generator
 - 🔲 Custom lobbies
