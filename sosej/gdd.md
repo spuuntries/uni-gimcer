@@ -273,8 +273,6 @@ NEUTRAL (loop)
 - Custom rules (damage modifiers, stage selection)
 - Friend-only matches
 
-Here's a new section you can add after the "Planned Modes" subsection in **🎪 Game Modes**:
-
 ---
 
 ### Training Modes
