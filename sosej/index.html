@@ -1,631 +1,1256 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sausage Legends</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      @import url("https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@400;600;700&display=swap");
 
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: 'Arial', sans-serif;
-            overflow: hidden;
-            cursor: none;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        #gameContainer {
-            position: relative;
-        }
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        font-family: "Poppins", sans-serif;
+        overflow: hidden;
+      }
 
-        canvas {
-            border: 4px solid #fff;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            background: #87CEEB;
-            cursor: none;
-        }
+      #gameContainer {
+        position: relative;
+      }
 
-        #ui {
-            position: absolute;
-            top: 20px;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 40px;
-            pointer-events: none;
-        }
+      canvas {
+        border: 6px solid #fff;
+        border-radius: 15px;
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
+        background: #87ceeb;
+        cursor: none;
+        display: none;
+      }
 
-        .playerInfo {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 15px 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            min-width: 200px;
-        }
+      canvas.active {
+        display: block;
+      }
 
-        .playerName {
-            font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 8px;
-            color: #333;
-        }
+      /* Character Selection Screen */
+      #characterSelect {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        max-width: 900px;
+      }
 
-        .healthBarContainer {
-            width: 100%;
-            height: 25px;
-            background: #ddd;
-            border-radius: 15px;
-            overflow: hidden;
-            border: 2px solid #333;
-        }
+      #characterSelect.hidden {
+        display: none;
+      }
 
-        .healthBar {
-            height: 100%;
-            transition: width 0.3s ease;
-            border-radius: 15px;
-        }
+      #characterSelect h1 {
+        font-family: "Bangers", cursive;
+        font-size: 64px;
+        color: #764ba2;
+        margin-bottom: 10px;
+        text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.1);
+        letter-spacing: 2px;
+      }
 
-        .player1Health {
-            background: linear-gradient(90deg, #ff6b6b, #ee5a6f);
-        }
+      #characterSelect .subtitle {
+        font-size: 18px;
+        color: #666;
+        margin-bottom: 30px;
+      }
 
-        .player2Health {
-            background: linear-gradient(90deg, #4ecdc4, #44a08d);
-        }
+      .characterGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
 
-        #gameOver {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px 60px;
-            border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
-            display: none;
-        }
+      .characterCard {
+        background: white;
+        border: 4px solid #ddd;
+        border-radius: 15px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+      }
 
-        #gameOver h1 {
-            font-size: 48px;
-            margin-bottom: 20px;
-            color: #333;
-        }
+      .characterCard:hover {
+        transform: translateY(-5px);
+        border-color: #667eea;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+      }
 
-        #gameOver button {
-            padding: 15px 40px;
-            font-size: 20px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            pointer-events: all;
-            transition: transform 0.2s;
-        }
+      .characterCard.selected {
+        border-color: #667eea;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
 
-        #gameOver button:hover {
-            transform: scale(1.05);
-        }
+      .characterCard .icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+      }
 
-        #controls {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.9);
-            padding: 15px 25px;
-            border-radius: 10px;
-            text-align: center;
-            font-size: 14px;
-            color: #333;
-        }
+      .characterCard .name {
+        font-weight: 700;
+        font-size: 16px;
+        margin-bottom: 5px;
+      }
 
-        .cursor {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #fff;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-        }
+      .characterCard .type {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 10px;
+      }
 
-        .damageText {
-            position: absolute;
-            color: #ff4444;
-            font-weight: bold;
-            font-size: 24px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            pointer-events: none;
-            animation: floatUp 1s ease-out forwards;
-        }
+      .characterCard.selected .type {
+        color: rgba(255, 255, 255, 0.8);
+      }
 
-        @keyframes floatUp {
-            0% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            100% {
-                opacity: 0;
-                transform: translateY(-50px);
-            }
+      .characterCard .stats {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        font-size: 11px;
+        text-align: left;
+      }
+
+      .stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .statBar {
+        width: 60px;
+        height: 6px;
+        background: #ddd;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+
+      .statBarFill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 3px;
+      }
+
+      .characterCard.selected .statBar {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      #startButton {
+        padding: 20px 60px;
+        font-size: 24px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        font-family: "Bangers", cursive;
+        letter-spacing: 1px;
+      }
+
+      #startButton:hover {
+        transform: scale(1.05);
+        box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+      }
+
+      #startButton:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      /* In-Game UI */
+      #ui {
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 30px;
+        pointer-events: none;
+      }
+
+      .playerInfo {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 20px 25px;
+        border-radius: 15px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        min-width: 280px;
+        border: 3px solid #fff;
+      }
+
+      .playerHeader {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .playerIcon {
+        font-size: 32px;
+      }
+
+      .playerDetails {
+        flex: 1;
+      }
+
+      .playerName {
+        font-weight: 700;
+        font-size: 20px;
+        color: #333;
+        font-family: "Bangers", cursive;
+        letter-spacing: 1px;
+      }
+
+      .playerType {
+        font-size: 12px;
+        color: #666;
+      }
+
+      .healthBarContainer {
+        width: 100%;
+        height: 30px;
+        background: #e0e0e0;
+        border-radius: 15px;
+        overflow: hidden;
+        border: 3px solid #333;
+        position: relative;
+      }
+
+      .healthBar {
+        height: 100%;
+        transition: width 0.3s ease;
+        border-radius: 15px;
+        background: linear-gradient(90deg, #ff6b6b, #ee5a6f);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .healthBar::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.3) 50%,
+          transparent 100%
+        );
+        animation: shimmer 2s infinite;
+      }
+
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-100%);
         }
+        100% {
+          transform: translateX(100%);
+        }
+      }
+
+      .player2Health {
+        background: linear-gradient(90deg, #4ecdc4, #44a08d);
+      }
+
+      .healthText {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-weight: 700;
+        font-size: 14px;
+        color: white;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        z-index: 1;
+      }
+
+      #gameOver {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.98);
+        padding: 50px 80px;
+        border-radius: 25px;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        display: none;
+        border: 5px solid #667eea;
+      }
+
+      #gameOver h1 {
+        font-family: "Bangers", cursive;
+        font-size: 64px;
+        margin-bottom: 20px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      #gameOver .winner {
+        font-size: 24px;
+        color: #666;
+        margin-bottom: 30px;
+      }
+
+      #gameOver button {
+        padding: 18px 50px;
+        font-size: 22px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        pointer-events: all;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        font-family: "Bangers", cursive;
+        letter-spacing: 1px;
+      }
+
+      #gameOver button:hover {
+        transform: scale(1.05);
+      }
+
+      #controls {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.95);
+        padding: 15px 30px;
+        border-radius: 50px;
+        text-align: center;
+        font-size: 14px;
+        color: #333;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        border: 2px solid #fff;
+      }
+
+      .cursor {
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        border: 4px solid #fff;
+        border-radius: 50%;
+        background: rgba(102, 126, 234, 0.4);
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+        z-index: 10000;
+      }
+
+      .damageText {
+        position: absolute;
+        color: #ff4444;
+        font-weight: 900;
+        font-size: 32px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+        animation: floatUp 1s ease-out forwards;
+        font-family: "Bangers", cursive;
+      }
+
+      @keyframes floatUp {
+        0% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-60px) scale(1.2);
+        }
+      }
+
+      .particle {
+        position: absolute;
+        pointer-events: none;
+        border-radius: 50%;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="cursor" id="cursor"></div>
+
+    <!-- Character Selection Screen -->
+    <div id="characterSelect">
+      <h1>🌭 SAUSAGE LEGENDS 🌭</h1>
+      <p class="subtitle">Choose Your Fighter!</p>
+
+      <div class="characterGrid">
+        <div class="characterCard" data-character="frankfurter">
+          <div class="icon">🌭</div>
+          <div class="name">Frankfurter</div>
+          <div class="type">Quick Jabs</div>
+          <div class="stats">
+            <div class="stat">
+              <span>Speed:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 90%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Power:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 60%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Weight:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 30%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="characterCard" data-character="bratwurst">
+          <div class="icon">🥖</div>
+          <div class="name">Bratwurst</div>
+          <div class="type">Heavy Hitter</div>
+          <div class="stats">
+            <div class="stat">
+              <span>Speed:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 40%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Power:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 100%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Weight:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 100%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="characterCard" data-character="chorizo">
+          <div class="icon">🌶️</div>
+          <div class="name">Chorizo</div>
+          <div class="type">Flame Attacks</div>
+          <div class="stats">
+            <div class="stat">
+              <span>Speed:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 95%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Power:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 70%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Weight:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 25%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="characterCard" data-character="boudin">
+          <div class="icon">⚪</div>
+          <div class="name">Boudin Blanc</div>
+          <div class="type">Graceful Sweeps</div>
+          <div class="stats">
+            <div class="stat">
+              <span>Speed:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 75%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Power:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 75%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Weight:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 50%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="characterCard" data-character="salami">
+          <div class="icon">🔴</div>
+          <div class="name">Salami</div>
+          <div class="type">Projectile Master</div>
+          <div class="stats">
+            <div class="stat">
+              <span>Speed:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 70%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Power:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 65%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Weight:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 60%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button id="startButton" disabled>SELECT A CHARACTER</button>
+    </div>
+
     <div id="gameContainer">
-        <canvas id="gameCanvas" width="1200" height="700"></canvas>
-        
-        <div id="ui">
-            <div class="playerInfo">
-                <div class="playerName">🌭 Player</div>
-                <div class="healthBarContainer">
-                    <div class="healthBar player1Health" id="player1Health" style="width: 100%"></div>
-                </div>
-            </div>
-            <div class="playerInfo">
-                <div class="playerName">🤖 Bot</div>
-                <div class="healthBarContainer">
-                    <div class="healthBar player2Health" id="player2Health" style="width: 100%"></div>
-                </div>
-            </div>
-        </div>
+      <canvas id="gameCanvas" width="1200" height="700"></canvas>
 
-        <div id="gameOver">
-            <h1 id="winnerText">Player Wins!</h1>
-            <button onclick="restartGame()">Play Again</button>
+      <div id="ui">
+        <div class="playerInfo">
+          <div class="playerHeader">
+            <div class="playerIcon" id="player1Icon">🌭</div>
+            <div class="playerDetails">
+              <div class="playerName" id="player1Name">Player</div>
+              <div class="playerType" id="player1Type">Frankfurter</div>
+            </div>
+          </div>
+          <div class="healthBarContainer">
+            <div class="healthText" id="player1HealthText">100 / 100</div>
+            <div
+              class="healthBar player1Health"
+              id="player1Health"
+              style="width: 100%"
+            ></div>
+          </div>
         </div>
+        <div class="playerInfo">
+          <div class="playerHeader">
+            <div class="playerIcon" id="player2Icon">🤖</div>
+            <div class="playerDetails">
+              <div class="playerName" id="player2Name">Bot</div>
+              <div class="playerType" id="player2Type">Random</div>
+            </div>
+          </div>
+          <div class="healthBarContainer">
+            <div class="healthText" id="player2HealthText">100 / 100</div>
+            <div
+              class="healthBar player2Health"
+              id="player2Health"
+              style="width: 100%"
+            ></div>
+          </div>
+        </div>
+      </div>
 
-        <div id="controls">
-            <strong>Controls:</strong> Move your mouse to flop your sausage!
-        </div>
+      <div id="gameOver">
+        <h1 id="winnerText">VICTORY!</h1>
+        <p class="winner" id="winnerSubtext">Player Wins!</p>
+        <button onclick="backToMenu()">Back to Menu</button>
+      </div>
+
+      <div id="controls">
+        <strong
+          >🖱️ Move your mouse to flop your sausage! • Click to shoot
+          (Salami)</strong
+        >
+      </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const cursorElement = document.getElementById('cursor');
-        const gameContainer = document.getElementById('gameContainer');
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      const cursorElement = document.getElementById("cursor");
+      const gameContainer = document.getElementById("gameContainer");
+      const characterSelect = document.getElementById("characterSelect");
 
-        // Mouse position
-        let mouseX = canvas.width / 4;
-        let mouseY = canvas.height / 2;
+      // Character definitions with weight classes
+      const CHARACTERS = {
+        frankfurter: {
+          name: "Frankfurter",
+          icon: "🌭",
+          color: "#D2691E",
+          weight: 0.3, // Very light - follows cursor closely
+          responsiveness: 0.25, // How fast head catches up to cursor
+          damage: 0.8,
+          health: 100,
+          segments: 8,
+          segmentWeight: 0.95, // How much gravity affects body
+          description: "Quick Jabs",
+        },
+        bratwurst: {
+          name: "Bratwurst",
+          icon: "🥖",
+          color: "#8B6914",
+          weight: 1.0, // Very heavy - lags behind cursor
+          responsiveness: 0.08, // Slow to follow cursor
+          damage: 1.8,
+          health: 140,
+          segments: 10,
+          segmentWeight: 1.5, // Heavy gravity on body
+          description: "Heavy Hitter",
+        },
+        chorizo: {
+          name: "Chorizo",
+          icon: "🌶️",
+          color: "#DC143C",
+          weight: 0.25, // Lightest - super responsive
+          responsiveness: 0.3,
+          damage: 1.0,
+          health: 85,
+          segments: 7,
+          segmentWeight: 0.8,
+          description: "Flame Attacks",
+          hasFlames: true,
+        },
+        boudin: {
+          name: "Boudin Blanc",
+          icon: "⚪",
+          color: "#F5F5DC",
+          weight: 0.5, // Medium weight
+          responsiveness: 0.18,
+          damage: 1.0,
+          health: 100,
+          segments: 9,
+          segmentWeight: 1.0,
+          description: "Graceful Sweeps",
+          elegant: true,
+        },
+        salami: {
+          name: "Salami",
+          icon: "🔴",
+          color: "#8B0000",
+          weight: 0.6,
+          responsiveness: 0.15,
+          damage: 0.9,
+          health: 110,
+          segments: 8,
+          segmentWeight: 1.1,
+          description: "Projectile Master",
+          hasProjectiles: true,
+        },
+      };
 
-        // Game state
-        let gameRunning = true;
+      let selectedCharacter = null;
+      let player1Character = null;
+      let player2Character = null;
+      let gameRunning = false;
+      let mouseX = canvas.width / 4;
+      let mouseY = canvas.height / 2;
+      let projectiles = [];
 
-        // Physics constants
-        const GRAVITY = 0.4;
-        const DAMPING = 0.96;
-        const SEGMENT_LENGTH = 30;
-        const NUM_SEGMENTS = 8;
-        const MAX_DAMAGE_PER_HIT = 15;
-        const MIN_VELOCITY_FOR_DAMAGE = 5;
-        const DAMAGE_COOLDOWN = 20; // frames between damage applications
-
-        // Sausage class with chain physics
-        class Sausage {
-            constructor(x, y, color, isBot = false) {
-                this.segments = [];
-                this.color = color;
-                this.health = 100;
-                this.maxHealth = 100;
-                this.isBot = isBot;
-                this.targetX = x;
-                this.targetY = y;
-                this.damageCooldown = 0;
-                this.hitFlash = 0;
-                
-                // Create segments (chain of connected points)
-                for (let i = 0; i < NUM_SEGMENTS; i++) {
-                    this.segments.push({
-                        x: x + i * SEGMENT_LENGTH,
-                        y: y,
-                        prevX: x + i * SEGMENT_LENGTH,
-                        prevY: y,
-                    });
-                }
-
-                // Bot AI
-                this.botAngle = 0;
-                this.botRadius = 150;
-                this.botSpeed = 0.04;
-                this.botCenterX = canvas.width * 0.75;
-                this.botCenterY = canvas.height / 2;
-            }
-
-            update() {
-                if (this.damageCooldown > 0) {
-                    this.damageCooldown--;
-                }
-                
-                if (this.hitFlash > 0) {
-                    this.hitFlash--;
-                }
-
-                if (this.isBot) {
-                    // Bot AI - move in patterns
-                    this.botAngle += this.botSpeed;
-                    this.targetX = this.botCenterX + Math.cos(this.botAngle) * this.botRadius;
-                    this.targetY = this.botCenterY + Math.sin(this.botAngle) * this.botRadius;
-                    
-                    // Occasionally change pattern
-                    if (Math.random() < 0.01) {
-                        this.botRadius = 100 + Math.random() * 200;
-                        this.botSpeed = 0.02 + Math.random() * 0.06;
-                    }
-                }
-
-                // First segment (head) follows target directly
-                const head = this.segments[0];
-                head.prevX = head.x;
-                head.prevY = head.y;
-                head.x = this.targetX;
-                head.y = this.targetY;
-
-                // Update remaining segments with Verlet integration
-                for (let i = 1; i < this.segments.length; i++) {
-                    const segment = this.segments[i];
-                    
-                    // Store current position
-                    const tempX = segment.x;
-                    const tempY = segment.y;
-                    
-                    // Verlet integration (velocity is implicit)
-                    const vx = (segment.x - segment.prevX) * DAMPING;
-                    const vy = (segment.y - segment.prevY) * DAMPING;
-                    
-                    segment.x += vx;
-                    segment.y += vy;
-                    
-                    // Apply gravity
-                    segment.y += GRAVITY;
-                    
-                    // Store previous position
-                    segment.prevX = tempX;
-                    segment.prevY = tempY;
-                }
-
-                // Constrain segments to maintain distance (multiple iterations for stability)
-                for (let iteration = 0; iteration < 3; iteration++) {
-                    for (let i = 0; i < this.segments.length - 1; i++) {
-                        const seg1 = this.segments[i];
-                        const seg2 = this.segments[i + 1];
-                        
-                        const dx = seg2.x - seg1.x;
-                        const dy = seg2.y - seg1.y;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
-                        
-                        if (distance > 0) {
-                            const difference = SEGMENT_LENGTH - distance;
-                            const percent = difference / distance / 2;
-                            
-                            const offsetX = dx * percent;
-                            const offsetY = dy * percent;
-                            
-                            // Don't move the head (first segment)
-                            if (i !== 0) {
-                                seg1.x -= offsetX;
-                                seg1.y -= offsetY;
-                            }
-                            seg2.x += offsetX;
-                            seg2.y += offsetY;
-                        }
-                    }
-                }
-
-                // Keep segments in bounds
-                for (let i = 1; i < this.segments.length; i++) {
-                    const segment = this.segments[i];
-                    if (segment.y > canvas.height - 20) {
-                        segment.y = canvas.height - 20;
-                        // Bounce
-                        const vy = segment.y - segment.prevY;
-                        segment.prevY = segment.y - vy * 0.3;
-                    }
-                    if (segment.x < 20) {
-                        segment.x = 20;
-                        segment.prevX = segment.x + (segment.x - segment.prevX) * 0.5;
-                    }
-                    if (segment.x > canvas.width - 20) {
-                        segment.x = canvas.width - 20;
-                        segment.prevX = segment.x + (segment.x - segment.prevX) * 0.5;
-                    }
-                }
-            }
-
-            takeDamage(amount, x, y) {
-                if (this.damageCooldown === 0) {
-                    this.health -= amount;
-                    this.damageCooldown = DAMAGE_COOLDOWN;
-                    this.hitFlash = 10;
-                    
-                    // Show damage text
-                    showDamageText(amount, x, y);
-                    
-                    if (this.health <= 0) {
-                        this.health = 0;
-                        endGame(this);
-                    }
-                }
-            }
-
-            draw() {
-                ctx.save();
-                
-                // Flash white when hit
-                let drawColor = this.color;
-                if (this.hitFlash > 0) {
-                    const flashAmount = this.hitFlash / 10;
-                    drawColor = `rgba(255, 255, 255, ${flashAmount})`;
-                    
-                    // Draw outline when hit
-                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
-                    ctx.lineWidth = 50;
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(this.segments[0].x, this.segments[0].y);
-                    for (let i = 1; i < this.segments.length; i++) {
-                        ctx.lineTo(this.segments[i].x, this.segments[i].y);
-                    }
-                    ctx.stroke();
-                }
-                
-                // Draw sausage body as connected segments
-                ctx.strokeStyle = this.hitFlash > 0 ? drawColor : this.color;
-                ctx.lineWidth = 45;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                
-                ctx.beginPath();
-                ctx.moveTo(this.segments[0].x, this.segments[0].y);
-                
-                for (let i = 1; i < this.segments.length; i++) {
-                    ctx.lineTo(this.segments[i].x, this.segments[i].y);
-                }
-                
-                ctx.stroke();
-
-                // Draw sausage stripes
-                ctx.strokeStyle = this.color === '#D2691E' ? '#8B4513' : '#2F4F2F';
-                ctx.lineWidth = 3;
-                
-                for (let i = 0; i < this.segments.length - 1; i++) {
-                    const seg = this.segments[i];
-                    const nextSeg = this.segments[i + 1];
-                    const angle = Math.atan2(nextSeg.y - seg.y, nextSeg.x - seg.x);
-                    
-                    const perpAngle = angle + Math.PI / 2;
-                    const stripe1X = seg.x + Math.cos(perpAngle) * 22;
-                    const stripe1Y = seg.y + Math.sin(perpAngle) * 22;
-                    const stripe2X = seg.x - Math.cos(perpAngle) * 22;
-                    const stripe2Y = seg.y - Math.sin(perpAngle) * 22;
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(stripe1X, stripe1Y);
-                    ctx.lineTo(stripe2X, stripe2Y);
-                    ctx.stroke();
-                }
-
-                // Draw eyes on head
-                const head = this.segments[0];
-                const neck = this.segments[1];
-                const headAngle = Math.atan2(neck.y - head.y, neck.x - head.x);
-                
-                const eyeOffset = 12;
-                const eyeDistance = 15;
-                
-                // Left eye
-                const leftEyeX = head.x + Math.cos(headAngle + Math.PI / 2) * eyeDistance + Math.cos(headAngle) * eyeOffset;
-                const leftEyeY = head.y + Math.sin(headAngle + Math.PI / 2) * eyeDistance + Math.sin(headAngle) * eyeOffset;
-                
-                // Right eye
-                const rightEyeX = head.x - Math.cos(headAngle + Math.PI / 2) * eyeDistance + Math.cos(headAngle) * eyeOffset;
-                const rightEyeY = head.y - Math.sin(headAngle + Math.PI / 2) * eyeDistance + Math.sin(headAngle) * eyeOffset;
-                
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.arc(leftEyeX, leftEyeY, 7, 0, Math.PI * 2);
-                ctx.arc(rightEyeX, rightEyeY, 7, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.fillStyle = 'black';
-                ctx.beginPath();
-                ctx.arc(leftEyeX, leftEyeY, 3, 0, Math.PI * 2);
-                ctx.arc(rightEyeX, rightEyeY, 3, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.restore();
-            }
-        }
-
-        // Initialize players
-        const player1 = new Sausage(300, 300, '#D2691E');
-        const player2 = new Sausage(900, 300, '#556B2F', true);
-
-        // Mouse tracking
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            mouseX = e.clientX - rect.left;
-            mouseY = e.clientY - rect.top;
-            player1.targetX = mouseX;
-            player1.targetY = mouseY;
+      // Character selection
+      document.querySelectorAll(".characterCard").forEach((card) => {
+        card.addEventListener("click", () => {
+          document
+            .querySelectorAll(".characterCard")
+            .forEach((c) => c.classList.remove("selected"));
+          card.classList.add("selected");
+          selectedCharacter = card.dataset.character;
+          document.getElementById("startButton").disabled = false;
+          document.getElementById("startButton").textContent = "START GAME";
         });
+      });
 
-        // Update cursor position
-        document.addEventListener('mousemove', (e) => {
-            cursorElement.style.left = e.clientX + 'px';
-            cursorElement.style.top = e.clientY + 'px';
-        });
+      document.getElementById("startButton").addEventListener("click", () => {
+        if (selectedCharacter) {
+          startGame();
+        }
+      });
 
-        // Show damage text
-        function showDamageText(damage, x, y) {
-            const damageElement = document.createElement('div');
-            damageElement.className = 'damageText';
-            damageElement.textContent = `-${Math.round(damage)}`;
-            damageElement.style.left = x + 'px';
-            damageElement.style.top = y + 'px';
-            gameContainer.appendChild(damageElement);
-            
-            setTimeout(() => {
-                damageElement.remove();
-            }, 1000);
+      function startGame() {
+        const characterKeys = Object.keys(CHARACTERS);
+        const randomBot =
+          characterKeys[Math.floor(Math.random() * characterKeys.length)];
+
+        player1Character = selectedCharacter;
+        player2Character = randomBot;
+
+        const p1Char = CHARACTERS[player1Character];
+        const p2Char = CHARACTERS[player2Character];
+
+        document.getElementById("player1Icon").textContent = p1Char.icon;
+        document.getElementById("player1Name").textContent = "Player";
+        document.getElementById("player1Type").textContent = p1Char.name;
+
+        document.getElementById("player2Icon").textContent = p2Char.icon;
+        document.getElementById("player2Name").textContent = "Bot";
+        document.getElementById("player2Type").textContent = p2Char.name;
+
+        characterSelect.classList.add("hidden");
+        canvas.classList.add("active");
+
+        initializeGame();
+      }
+
+      function backToMenu() {
+        characterSelect.classList.remove("hidden");
+        canvas.classList.remove("active");
+        document.getElementById("gameOver").style.display = "none";
+        gameRunning = false;
+      }
+
+      // Physics constants
+      const BASE_GRAVITY = 0.4;
+      const DAMPING = 0.96;
+      const SEGMENT_LENGTH = 30;
+      const MAX_DAMAGE_PER_HIT = 15;
+      const MIN_VELOCITY_FOR_DAMAGE = 5;
+      const DAMAGE_COOLDOWN = 20;
+
+      // Projectile class
+      class Projectile {
+        constructor(x, y, vx, vy, owner) {
+          this.x = x;
+          this.y = y;
+          this.vx = vx;
+          this.vy = vy;
+          this.owner = owner;
+          this.radius = 8;
+          this.lifetime = 120;
         }
 
-        // Collision detection
-        function checkCollision(sausage1, sausage2) {
-            // Check collision between all segments
-            for (let i = 0; i < sausage1.segments.length; i++) {
-                const seg1 = sausage1.segments[i];
-                
-                for (let j = 0; j < sausage2.segments.length; j++) {
-                    const seg2 = sausage2.segments[j];
-                    
-                    const dx = seg1.x - seg2.x;
-                    const dy = seg1.y - seg2.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (distance < 45) {
-                        // Calculate velocities
-                        const vel1 = Math.sqrt(
-                            Math.pow(seg1.x - seg1.prevX, 2) + 
-                            Math.pow(seg1.y - seg1.prevY, 2)
-                        );
-                        const vel2 = Math.sqrt(
-                            Math.pow(seg2.x - seg2.prevX, 2) + 
-                            Math.pow(seg2.y - seg2.prevY, 2)
-                        );
-                        
-                        // Apply damage based on velocity difference
-                        const velocityDiff = Math.abs(vel1 - vel2);
-                        
-                        // Only apply damage if velocity difference is significant
-                        if (velocityDiff > MIN_VELOCITY_FOR_DAMAGE) {
-                            // Calculate damage (capped at MAX_DAMAGE_PER_HIT)
-                            const rawDamage = (velocityDiff - MIN_VELOCITY_FOR_DAMAGE) * 0.5;
-                            const damage = Math.min(rawDamage, MAX_DAMAGE_PER_HIT);
-                            
-                            // Get canvas position for damage text
-                            const rect = canvas.getBoundingClientRect();
-                            const canvasX = rect.left + seg2.x;
-                            const canvasY = rect.top + seg2.y;
-                            
-                            if (vel1 > vel2) {
-                                sausage2.takeDamage(damage, canvasX, canvasY);
-                            } else {
-                                sausage1.takeDamage(damage, canvasX, canvasY);
-                            }
-                        }
-                        
-                        // Separate segments (but not the heads)
-                        if (i !== 0 && j !== 0) {
-                            const angle = Math.atan2(dy, dx);
-                            const overlap = 45 - distance;
-                            seg1.x += Math.cos(angle) * overlap * 0.5;
-                            seg1.y += Math.sin(angle) * overlap * 0.5;
-                            seg2.x -= Math.cos(angle) * overlap * 0.5;
-                            seg2.y -= Math.sin(angle) * overlap * 0.5;
-                        }
-                    }
+        update() {
+          this.x += this.vx;
+          this.y += this.vy;
+          this.vy += BASE_GRAVITY * 0.5;
+          this.lifetime--;
+          return this.lifetime > 0 && this.y < canvas.height;
+        }
+
+        draw() {
+          ctx.fillStyle = "#8B0000";
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#DC143C";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+
+      // Sausage class with weight-based physics
+      class Sausage {
+        constructor(x, y, characterType, isBot = false) {
+          const char = CHARACTERS[characterType];
+          this.characterType = characterType;
+          this.segments = [];
+          this.color = char.color;
+          this.health = char.health;
+          this.maxHealth = char.health;
+          this.isBot = isBot;
+          this.targetX = x;
+          this.targetY = y;
+          this.headX = x; // Actual head position (lags behind target)
+          this.headY = y;
+          this.damageCooldown = 0;
+          this.hitFlash = 0;
+          this.weight = char.weight;
+          this.responsiveness = char.responsiveness;
+          this.damageMultiplier = char.damage;
+          this.segmentWeight = char.segmentWeight;
+          this.hasFlames = char.hasFlames;
+          this.elegant = char.elegant;
+          this.hasProjectiles = char.hasProjectiles;
+          this.projectileCooldown = 0;
+
+          // Create segments
+          const numSegments = char.segments;
+          for (let i = 0; i < numSegments; i++) {
+            this.segments.push({
+              x: x + i * SEGMENT_LENGTH,
+              y: y,
+              prevX: x + i * SEGMENT_LENGTH,
+              prevY: y,
+            });
+          }
+
+          // Bot AI
+          this.botAngle = Math.random() * Math.PI * 2;
+          this.botRadius = 150;
+          this.botSpeed = 0.04;
+          this.botCenterX = canvas.width * 0.75;
+          this.botCenterY = canvas.height / 2;
+        }
+
+        update() {
+          if (this.damageCooldown > 0) this.damageCooldown--;
+          if (this.hitFlash > 0) this.hitFlash--;
+          if (this.projectileCooldown > 0) this.projectileCooldown--;
+
+          if (this.isBot) {
+            this.botAngle += this.botSpeed;
+            this.targetX =
+              this.botCenterX + Math.cos(this.botAngle) * this.botRadius;
+            this.targetY =
+              this.botCenterY + Math.sin(this.botAngle) * this.botRadius;
+
+            if (Math.random() < 0.01) {
+              this.botRadius = 100 + Math.random() * 200;
+              this.botSpeed = 0.02 + Math.random() * 0.06;
+            }
+
+            if (
+              this.hasProjectiles &&
+              this.projectileCooldown === 0 &&
+              Math.random() < 0.02
+            ) {
+              this.shootProjectile();
+            }
+          }
+
+          // Head lerps towards target based on responsiveness (weight affects this)
+          const dx = this.targetX - this.headX;
+          const dy = this.targetY - this.headY;
+
+          // Heavier = slower response
+          this.headX += dx * this.responsiveness;
+          this.headY += dy * this.responsiveness;
+
+          // Set first segment to head position
+          const head = this.segments[0];
+          head.prevX = head.x;
+          head.prevY = head.y;
+          head.x = this.headX;
+          head.y = this.headY;
+
+          // Update segments with Verlet integration (weight affects gravity)
+          const gravity = BASE_GRAVITY * this.segmentWeight;
+
+          for (let i = 1; i < this.segments.length; i++) {
+            const segment = this.segments[i];
+            const tempX = segment.x;
+            const tempY = segment.y;
+
+            // Heavier segments have more damping
+            const dampingFactor = DAMPING - this.weight * 0.05;
+            segment.x += (segment.x - segment.prevX) * dampingFactor;
+            segment.y += (segment.y - segment.prevY) * dampingFactor;
+            segment.y += gravity;
+
+            segment.prevX = tempX;
+            segment.prevY = tempY;
+          }
+
+          // Constrain segments
+          for (let iteration = 0; iteration < 3; iteration++) {
+            for (let i = 0; i < this.segments.length - 1; i++) {
+              const seg1 = this.segments[i];
+              const seg2 = this.segments[i + 1];
+
+              const dx = seg2.x - seg1.x;
+              const dy = seg2.y - seg1.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+
+              if (distance > 0) {
+                const difference = SEGMENT_LENGTH - distance;
+                const percent = difference / distance / 2;
+                const offsetX = dx * percent;
+                const offsetY = dy * percent;
+
+                if (i !== 0) {
+                  seg1.x -= offsetX;
+                  seg1.y -= offsetY;
                 }
+                seg2.x += offsetX;
+                seg2.y += offsetY;
+              }
             }
-        }
+          }
 
-        // Update health bars
-        function updateHealthBars() {
-            document.getElementById('player1Health').style.width = 
-                (player1.health / player1.maxHealth * 100) + '%';
-            document.getElementById('player2Health').style.width = 
-                (player2.health / player2.maxHealth * 100) + '%';
-        }
-
-        // End game
-        function endGame(loser) {
-            gameRunning = false;
-            const winner = loser === player1 ? 'Bot' : 'Player';
-            document.getElementById('winnerText').textContent = winner + ' Wins!';
-            document.getElementById('gameOver').style.display = 'block';
-        }
-
-        // Restart game
-        function restartGame() {
-            player1.health = 100;
-            player1.damageCooldown = 0;
-            player1.hitFlash = 0;
-            player1.segments.forEach((seg, i) => {
-                seg.x = 300 + i * SEGMENT_LENGTH;
-                seg.y = 300;
-                seg.prevX = seg.x;
-                seg.prevY = seg.y;
-            });
-            
-            player2.health = 100;
-            player2.damageCooldown = 0;
-            player2.hitFlash = 0;
-            player2.segments.forEach((seg, i) => {
-                seg.x = 900 + i * SEGMENT_LENGTH;
-                seg.y = 300;
-                seg.prevX = seg.x;
-                seg.prevY = seg.y;
-            });
-            
-            gameRunning = true;
-            document.getElementById('gameOver').style.display = 'none';
-        }
-
-        // Draw background
-        function drawBackground() {
-            // Sky
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, '#87CEEB');
-            gradient.addColorStop(1, '#E0F6FF');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Ground
-            ctx.fillStyle = '#8B7355';
-            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-
-            // Grass
-            ctx.fillStyle = '#90EE90';
-            ctx.fillRect(0, canvas.height - 55, canvas.width, 10);
-        }
-
-        // Game loop
-        function gameLoop() {
-            drawBackground();
-
-            if (gameRunning) {
-                player1.update();
-                player2.update();
-                checkCollision(player1, player2);
-                updateHealthBars();
+          // Boundaries with weight-based bounce
+          for (let i = 1; i < this.segments.length; i++) {
+            const segment = this.segments[i];
+            if (segment.y > canvas.height - 20) {
+              segment.y = canvas.height - 20;
+              const bounceDamping = 0.3 * (1 - this.weight * 0.5); // Heavier = less bounce
+              segment.prevY =
+                segment.y - (segment.y - segment.prevY) * bounceDamping;
             }
+            if (segment.x < 20) segment.x = 20;
+            if (segment.x > canvas.width - 20) segment.x = canvas.width - 20;
+          }
 
-            player1.draw();
-            player2.draw();
-
-            requestAnimationFrame(gameLoop);
+          // Flame particles for Chorizo
+          if (this.hasFlames && Math.random() < 0.3) {
+            const tail = this.segments[this.segments.length - 1];
+            createFlameParticle(tail.x, tail.y);
+          }
         }
 
-        // Start game
+        shootProjectile() {
+          const head = this.segments[0];
+          const neck = this.segments[1];
+          const angle = Math.atan2(neck.y - head.y, neck.x - head.x);
+          const speed = 8;
+          projectiles.push(
+            new Projectile(
+              head.x,
+              head.y,
+              Math.cos(angle + Math.PI) * speed,
+              Math.sin(angle + Math.PI) * speed,
+              this
+            )
+          );
+          this.projectileCooldown = 60;
+        }
+
+        takeDamage(amount, x, y) {
+          if (this.damageCooldown === 0) {
+            // Weight affects damage taken: heavier = take less damage
+            const defenseFactor = 1 - this.weight * 0.3;
+            const actualDamage = amount * defenseFactor;
+            this.health -= actualDamage;
+            this.damageCooldown = DAMAGE_COOLDOWN;
+            this.hitFlash = 10;
+
+            showDamageText(actualDamage, x, y);
+
+            if (this.health <= 0) {
+              this.health = 0;
+              endGame(this);
+            }
+          }
+        }
+
+        draw() {
+          ctx.save();
+
+          // Flash effect
+          if (this.hitFlash > 0) {
+            ctx.strokeStyle = "rgba(255, 255, 0, 0.8)";
+            ctx.lineWidth = 50;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.beginPath();
+            ctx.moveTo(this.segments[0].x, this.segments[0].y);
+            for (let i = 1; i < this.segments.length; i++) {
+              ctx.lineTo(this.segments[i].x, this.segments[i].y);
+            }
+            ctx.stroke();
+          }
+
+          // Elegant trail for Boudin
+          if (this.elegant) {
+            ctx.strokeStyle = "rgba(245, 245, 220, 0.3)";
+            ctx.lineWidth = 55;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.beginPath();
+            ctx.moveTo(this.segments[0].x, this.segments[0].y);
+            for (let i = 1; i < this.segments.length; i++) {
+              ctx.lineTo(this.segments[i].x, this.segments[i].y);
+            }
+            ctx.stroke();
+          }
+
+          // Main body - thickness varies by weight
+          const baseWidth = 45;
+          const thickness = baseWidth + this.weight * 15; // Heavier = thicker
+
+          ctx.strokeStyle = this.color;
+          ctx.lineWidth = thickness;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          ctx.moveTo(this.segments[0].x, this.segments[0].y);
+          for (let i = 1; i < this.segments.length; i++) {
+            ctx.lineTo(this.segments[i].x, this.segments[i].y);
+          }
+          ctx.stroke();
+
+          // Stripes
+          const stripeColor =
+            this.color === "#F5F5DC"
+              ? "#D3D3D3"
+              : this.color === "#DC143C"
+                ? "#8B0000"
+                : "#654321";
+          ctx.strokeStyle = stripeColor;
+          ctx.lineWidth = 3;
+
+          for (let i = 0; i < this.segments.length - 1; i++) {
+            const seg = this.segments[i];
+            const nextSeg = this.segments[i + 1];
+            const angle = Math.atan2(nextSeg.y - seg.y, nextSeg.x - seg.x);
+            const perpAngle = angle + Math.PI / 2;
+            const stripeLength = thickness / 2;
+
+            ctx.beginPath();
+            ctx.moveTo(
+              seg.x + Math.cos(perpAngle) * stripeLength,
+              seg.y + Math.sin(perpAngle) * stripeLength
+            );
+            ctx.lineTo(
+              seg.x - Math.cos(perpAngle) * stripeLength,
+              seg.y - Math.sin(perpAngle) * stripeLength
+            );
+            ctx.stroke();
+          }
+
+          // Eyes
+          const head = this.segments[0];
+          const neck = this.segments[1];
+          const headAngle = Math.atan2(neck.y - head.y, neck.x - head.x);
+          const eyeOffset = 12;
+          const eyeDistance = 15;
+
+          const leftEyeX =
+            head.x +
+            Math.cos(headAngle + Math.PI / 2) * eyeDistance +
+            Math.cos(headAngle) * eyeOffset;
+          const leftEyeY =
+            head.y +
+            Math.sin(headAngle + Math.PI / 2) * eyeDistance +
+            Math.sin(headAngle) * eyeOffset;
+          const rightEyeX =
+            head.x -
+            Math.cos(headAngle + Math.PI / 2) * eyeDistance +
+            Math.cos(headAngle) * eyeOffset;
+          const rightEyeY =
+            head.y -
+            Math.sin(headAngle + Math.PI / 2) * eyeDistance +
+            Math.sin(headAngle) * eyeOffset;
+
+          ctx.fillStyle = "white";
+          ctx.beginPath();
+          ctx.arc(leftEyeX, leftEyeY, 7, 0, Math.PI * 2);
+          ctx.arc(rightEyeX, rightEyeY, 7, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "black";
+          ctx.beginPath();
+          ctx.arc(leftEyeX, leftEyeY, 3, 0, Math.PI * 2);
+          ctx.arc(rightEyeX, rightEyeY, 3, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.restore();
+        }
+      }
+
+      let player1, player2;
+
+      function initializeGame() {
+        player1 = new Sausage(300, 300, player1Character);
+        player2 = new Sausage(900, 300, player2Character, true);
+        projectiles = [];
+        gameRunning = true;
         gameLoop();
+      }
+
+      canvas.addEventListener("mousemove", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
+        if (player1) {
+          player1.targetX = mouseX;
+          player1.targetY = mouseY;
+        }
+      });
+
+      canvas.addEventListener("click", () => {
+        if (
+          player1 &&
+          player1.hasProjectiles &&
+          player1.projectileCooldown === 0 &&
+          gameRunning
+        ) {
+          player1.shootProjectile();
+        }
+      });
+
+      document.addEventListener("mousemove", (e) => {
+        cursorElement.style.left = e.clientX + "px";
+        cursorElement.style.top = e.clientY + "px";
+      });
+
+      function createFlameParticle(x, y) {
+        const particle = document.createElement("div");
+        particle.className = "particle";
+        particle.style.left = x + canvas.getBoundingClientRect().left + "px";
+        particle.style.top = y + canvas.getBoundingClientRect().top + "px";
+        particle.style.width = 5 + Math.random() * 10 + "px";
+        particle.style.height = particle.style.width;
+        particle.style.background = Math.random() > 0.5 ? "#ff6b00" : "#ff0000";
+        document.body.appendChild(particle);
+        setTimeout(() => particle.remove(), 500);
+      }
+
+      function showDamageText(damage, x, y) {
+        const damageElement = document.createElement("div");
+        damageElement.className = "damageText";
+        damageElement.textContent = `-${Math.round(damage)}`;
+        damageElement.style.left = x + "px";
+        damageElement.style.top = y + "px";
+        gameContainer.appendChild(damageElement);
+        setTimeout(() => damageElement.remove(), 1000);
+      }
+
+      function checkCollision(sausage1, sausage2) {
+        for (let i = 0; i < sausage1.segments.length; i++) {
+          const seg1 = sausage1.segments[i];
+          for (let j = 0; j < sausage2.segments.length; j++) {
+            const seg2 = sausage2.segments[j];
+            const dx = seg1.x - seg2.x;
+            const dy = seg1.y - seg2.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < 45) {
+              const vel1 = Math.sqrt(
+                Math.pow(seg1.x - seg1.prevX, 2) +
+                  Math.pow(seg1.y - seg1.prevY, 2)
+              );
+              const vel2 = Math.sqrt(
+                Math.pow(seg2.x - seg2.prevX, 2) +
+                  Math.pow(seg2.y - seg2.prevY, 2)
+              );
+              const velocityDiff = Math.abs(vel1 - vel2);
+
+              if (velocityDiff > MIN_VELOCITY_FOR_DAMAGE) {
+                const rawDamage =
+                  (velocityDiff - MIN_VELOCITY_FOR_DAMAGE) * 0.5;
+                const damage = Math.min(rawDamage, MAX_DAMAGE_PER_HIT);
+                const rect = canvas.getBoundingClientRect();
+
+                if (vel1 > vel2) {
+                  const actualDamage = damage * sausage1.damageMultiplier;
+                  sausage2.takeDamage(
+                    actualDamage,
+                    rect.left + seg2.x,
+                    rect.top + seg2.y
+                  );
+                } else {
+                  const actualDamage = damage * sausage2.damageMultiplier;
+                  sausage1.takeDamage(
+                    actualDamage,
+                    rect.left + seg1.x,
+                    rect.top + seg1.y
+                  );
+                }
+              }
+
+              if (i !== 0 && j !== 0) {
+                const angle = Math.atan2(dy, dx);
+                const overlap = 45 - distance;
+                seg1.x += Math.cos(angle) * overlap * 0.5;
+                seg1.y += Math.sin(angle) * overlap * 0.5;
+                seg2.x -= Math.cos(angle) * overlap * 0.5;
+                seg2.y -= Math.sin(angle) * overlap * 0.5;
+              }
+            }
+          }
+        }
+      }
+
+      function checkProjectileCollisions() {
+        projectiles = projectiles.filter((proj) => {
+          const target = proj.owner === player1 ? player2 : player1;
+          for (let seg of target.segments) {
+            const dx = proj.x - seg.x;
+            const dy = proj.y - seg.y;
+            if (Math.sqrt(dx * dx + dy * dy) < 25) {
+              const rect = canvas.getBoundingClientRect();
+              target.takeDamage(8, rect.left + seg.x, rect.top + seg.y);
+              return false;
+            }
+          }
+          return proj.update();
+        });
+      }
+
+      function updateHealthBars() {
+        const p1Percent = (player1.health / player1.maxHealth) * 100;
+        const p2Percent = (player2.health / player2.maxHealth) * 100;
+
+        document.getElementById("player1Health").style.width = p1Percent + "%";
+        document.getElementById("player2Health").style.width = p2Percent + "%";
+        document.getElementById("player1HealthText").textContent =
+          `${Math.ceil(player1.health)} / ${player1.maxHealth}`;
+        document.getElementById("player2HealthText").textContent =
+          `${Math.ceil(player2.health)} / ${player2.maxHealth}`;
+      }
+
+      function endGame(loser) {
+        gameRunning = false;
+        const winner =
+          loser === player1
+            ? CHARACTERS[player2Character].name
+            : CHARACTERS[player1Character].name;
+        const winnerIcon =
+          loser === player1
+            ? CHARACTERS[player2Character].icon
+            : CHARACTERS[player1Character].icon;
+
+        document.getElementById("winnerText").textContent =
+          winnerIcon + " VICTORY! " + winnerIcon;
+        document.getElementById("winnerSubtext").textContent =
+          winner + " Wins!";
+        document.getElementById("gameOver").style.display = "block";
+      }
+
+      function drawBackground() {
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, "#87CEEB");
+        gradient.addColorStop(1, "#E0F6FF");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#8B7355";
+        ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+        ctx.fillStyle = "#90EE90";
+        ctx.fillRect(0, canvas.height - 55, canvas.width, 10);
+      }
+
+      function gameLoop() {
+        if (!gameRunning) return;
+
+        drawBackground();
+
+        player1.update();
+        player2.update();
+        checkCollision(player1, player2);
+        checkProjectileCollisions();
+        updateHealthBars();
+
+        player1.draw();
+        player2.draw();
+        projectiles.forEach((proj) => proj.draw());
+
+        requestAnimationFrame(gameLoop);
+      }
     </script>
-</body>
+  </body>
 </html>
