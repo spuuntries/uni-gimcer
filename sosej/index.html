@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sausage Legends</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            cursor: none;
+        }
+
+        #gameContainer {
+            position: relative;
+        }
+
+        canvas {
+            border: 4px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            background: #87CEEB;
+            cursor: none;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+            pointer-events: none;
+        }
+
+        .playerInfo {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+        }
+
+        .playerName {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .healthBarContainer {
+            width: 100%;
+            height: 25px;
+            background: #ddd;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid #333;
+        }
+
+        .healthBar {
+            height: 100%;
+            transition: width 0.3s ease;
+            border-radius: 15px;
+        }
+
+        .player1Health {
+            background: linear-gradient(90deg, #ff6b6b, #ee5a6f);
+        }
+
+        .player2Health {
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px 60px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+            display: none;
+        }
+
+        #gameOver h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        #gameOver button {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            pointer-events: all;
+            transition: transform 0.2s;
+        }
+
+        #gameOver button:hover {
+            transform: scale(1.05);
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .cursor {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .damageText {
+            position: absolute;
+            color: #ff4444;
+            font-weight: bold;
+            font-size: 24px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="cursor" id="cursor"></div>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1200" height="700"></canvas>
+        
+        <div id="ui">
+            <div class="playerInfo">
+                <div class="playerName">🌭 Player</div>
+                <div class="healthBarContainer">
+                    <div class="healthBar player1Health" id="player1Health" style="width: 100%"></div>
+                </div>
+            </div>
+            <div class="playerInfo">
+                <div class="playerName">🤖 Bot</div>
+                <div class="healthBarContainer">
+                    <div class="healthBar player2Health" id="player2Health" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="gameOver">
+            <h1 id="winnerText">Player Wins!</h1>
+            <button onclick="restartGame()">Play Again</button>
+        </div>
+
+        <div id="controls">
+            <strong>Controls:</strong> Move your mouse to flop your sausage!
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const cursorElement = document.getElementById('cursor');
+        const gameContainer = document.getElementById('gameContainer');
+
+        // Mouse position
+        let mouseX = canvas.width / 4;
+        let mouseY = canvas.height / 2;
+
+        // Game state
+        let gameRunning = true;
+
+        // Physics constants
+        const GRAVITY = 0.4;
+        const DAMPING = 0.96;
+        const SEGMENT_LENGTH = 30;
+        const NUM_SEGMENTS = 8;
+        const MAX_DAMAGE_PER_HIT = 15;
+        const MIN_VELOCITY_FOR_DAMAGE = 5;
+        const DAMAGE_COOLDOWN = 20; // frames between damage applications
+
+        // Sausage class with chain physics
+        class Sausage {
+            constructor(x, y, color, isBot = false) {
+                this.segments = [];
+                this.color = color;
+                this.health = 100;
+                this.maxHealth = 100;
+                this.isBot = isBot;
+                this.targetX = x;
+                this.targetY = y;
+                this.damageCooldown = 0;
+                this.hitFlash = 0;
+                
+                // Create segments (chain of connected points)
+                for (let i = 0; i < NUM_SEGMENTS; i++) {
+                    this.segments.push({
+                        x: x + i * SEGMENT_LENGTH,
+                        y: y,
+                        prevX: x + i * SEGMENT_LENGTH,
+                        prevY: y,
+                    });
+                }
+
+                // Bot AI
+                this.botAngle = 0;
+                this.botRadius = 150;
+                this.botSpeed = 0.04;
+                this.botCenterX = canvas.width * 0.75;
+                this.botCenterY = canvas.height / 2;
+            }
+
+            update() {
+                if (this.damageCooldown > 0) {
+                    this.damageCooldown--;
+                }
+                
+                if (this.hitFlash > 0) {
+                    this.hitFlash--;
+                }
+
+                if (this.isBot) {
+                    // Bot AI - move in patterns
+                    this.botAngle += this.botSpeed;
+                    this.targetX = this.botCenterX + Math.cos(this.botAngle) * this.botRadius;
+                    this.targetY = this.botCenterY + Math.sin(this.botAngle) * this.botRadius;
+                    
+                    // Occasionally change pattern
+                    if (Math.random() < 0.01) {
+                        this.botRadius = 100 + Math.random() * 200;
+                        this.botSpeed = 0.02 + Math.random() * 0.06;
+                    }
+                }
+
+                // First segment (head) follows target directly
+                const head = this.segments[0];
+                head.prevX = head.x;
+                head.prevY = head.y;
+                head.x = this.targetX;
+                head.y = this.targetY;
+
+                // Update remaining segments with Verlet integration
+                for (let i = 1; i < this.segments.length; i++) {
+                    const segment = this.segments[i];
+                    
+                    // Store current position
+                    const tempX = segment.x;
+                    const tempY = segment.y;
+                    
+                    // Verlet integration (velocity is implicit)
+                    const vx = (segment.x - segment.prevX) * DAMPING;
+                    const vy = (segment.y - segment.prevY) * DAMPING;
+                    
+                    segment.x += vx;
+                    segment.y += vy;
+                    
+                    // Apply gravity
+                    segment.y += GRAVITY;
+                    
+                    // Store previous position
+                    segment.prevX = tempX;
+                    segment.prevY = tempY;
+                }
+
+                // Constrain segments to maintain distance (multiple iterations for stability)
+                for (let iteration = 0; iteration < 3; iteration++) {
+                    for (let i = 0; i < this.segments.length - 1; i++) {
+                        const seg1 = this.segments[i];
+                        const seg2 = this.segments[i + 1];
+                        
+                        const dx = seg2.x - seg1.x;
+                        const dy = seg2.y - seg1.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance > 0) {
+                            const difference = SEGMENT_LENGTH - distance;
+                            const percent = difference / distance / 2;
+                            
+                            const offsetX = dx * percent;
+                            const offsetY = dy * percent;
+                            
+                            // Don't move the head (first segment)
+                            if (i !== 0) {
+                                seg1.x -= offsetX;
+                                seg1.y -= offsetY;
+                            }
+                            seg2.x += offsetX;
+                            seg2.y += offsetY;
+                        }
+                    }
+                }
+
+                // Keep segments in bounds
+                for (let i = 1; i < this.segments.length; i++) {
+                    const segment = this.segments[i];
+                    if (segment.y > canvas.height - 20) {
+                        segment.y = canvas.height - 20;
+                        // Bounce
+                        const vy = segment.y - segment.prevY;
+                        segment.prevY = segment.y - vy * 0.3;
+                    }
+                    if (segment.x < 20) {
+                        segment.x = 20;
+                        segment.prevX = segment.x + (segment.x - segment.prevX) * 0.5;
+                    }
+                    if (segment.x > canvas.width - 20) {
+                        segment.x = canvas.width - 20;
+                        segment.prevX = segment.x + (segment.x - segment.prevX) * 0.5;
+                    }
+                }
+            }
+
+            takeDamage(amount, x, y) {
+                if (this.damageCooldown === 0) {
+                    this.health -= amount;
+                    this.damageCooldown = DAMAGE_COOLDOWN;
+                    this.hitFlash = 10;
+                    
+                    // Show damage text
+                    showDamageText(amount, x, y);
+                    
+                    if (this.health <= 0) {
+                        this.health = 0;
+                        endGame(this);
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                
+                // Flash white when hit
+                let drawColor = this.color;
+                if (this.hitFlash > 0) {
+                    const flashAmount = this.hitFlash / 10;
+                    drawColor = `rgba(255, 255, 255, ${flashAmount})`;
+                    
+                    // Draw outline when hit
+                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
+                    ctx.lineWidth = 50;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(this.segments[0].x, this.segments[0].y);
+                    for (let i = 1; i < this.segments.length; i++) {
+                        ctx.lineTo(this.segments[i].x, this.segments[i].y);
+                    }
+                    ctx.stroke();
+                }
+                
+                // Draw sausage body as connected segments
+                ctx.strokeStyle = this.hitFlash > 0 ? drawColor : this.color;
+                ctx.lineWidth = 45;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(this.segments[0].x, this.segments[0].y);
+                
+                for (let i = 1; i < this.segments.length; i++) {
+                    ctx.lineTo(this.segments[i].x, this.segments[i].y);
+                }
+                
+                ctx.stroke();
+
+                // Draw sausage stripes
+                ctx.strokeStyle = this.color === '#D2691E' ? '#8B4513' : '#2F4F2F';
+                ctx.lineWidth = 3;
+                
+                for (let i = 0; i < this.segments.length - 1; i++) {
+                    const seg = this.segments[i];
+                    const nextSeg = this.segments[i + 1];
+                    const angle = Math.atan2(nextSeg.y - seg.y, nextSeg.x - seg.x);
+                    
+                    const perpAngle = angle + Math.PI / 2;
+                    const stripe1X = seg.x + Math.cos(perpAngle) * 22;
+                    const stripe1Y = seg.y + Math.sin(perpAngle) * 22;
+                    const stripe2X = seg.x - Math.cos(perpAngle) * 22;
+                    const stripe2Y = seg.y - Math.sin(perpAngle) * 22;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(stripe1X, stripe1Y);
+                    ctx.lineTo(stripe2X, stripe2Y);
+                    ctx.stroke();
+                }
+
+                // Draw eyes on head
+                const head = this.segments[0];
+                const neck = this.segments[1];
+                const headAngle = Math.atan2(neck.y - head.y, neck.x - head.x);
+                
+                const eyeOffset = 12;
+                const eyeDistance = 15;
+                
+                // Left eye
+                const leftEyeX = head.x + Math.cos(headAngle + Math.PI / 2) * eyeDistance + Math.cos(headAngle) * eyeOffset;
+                const leftEyeY = head.y + Math.sin(headAngle + Math.PI / 2) * eyeDistance + Math.sin(headAngle) * eyeOffset;
+                
+                // Right eye
+                const rightEyeX = head.x - Math.cos(headAngle + Math.PI / 2) * eyeDistance + Math.cos(headAngle) * eyeOffset;
+                const rightEyeY = head.y - Math.sin(headAngle + Math.PI / 2) * eyeDistance + Math.sin(headAngle) * eyeOffset;
+                
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(leftEyeX, leftEyeY, 7, 0, Math.PI * 2);
+                ctx.arc(rightEyeX, rightEyeY, 7, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(leftEyeX, leftEyeY, 3, 0, Math.PI * 2);
+                ctx.arc(rightEyeX, rightEyeY, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        // Initialize players
+        const player1 = new Sausage(300, 300, '#D2691E');
+        const player2 = new Sausage(900, 300, '#556B2F', true);
+
+        // Mouse tracking
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+            player1.targetX = mouseX;
+            player1.targetY = mouseY;
+        });
+
+        // Update cursor position
+        document.addEventListener('mousemove', (e) => {
+            cursorElement.style.left = e.clientX + 'px';
+            cursorElement.style.top = e.clientY + 'px';
+        });
+
+        // Show damage text
+        function showDamageText(damage, x, y) {
+            const damageElement = document.createElement('div');
+            damageElement.className = 'damageText';
+            damageElement.textContent = `-${Math.round(damage)}`;
+            damageElement.style.left = x + 'px';
+            damageElement.style.top = y + 'px';
+            gameContainer.appendChild(damageElement);
+            
+            setTimeout(() => {
+                damageElement.remove();
+            }, 1000);
+        }
+
+        // Collision detection
+        function checkCollision(sausage1, sausage2) {
+            // Check collision between all segments
+            for (let i = 0; i < sausage1.segments.length; i++) {
+                const seg1 = sausage1.segments[i];
+                
+                for (let j = 0; j < sausage2.segments.length; j++) {
+                    const seg2 = sausage2.segments[j];
+                    
+                    const dx = seg1.x - seg2.x;
+                    const dy = seg1.y - seg2.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 45) {
+                        // Calculate velocities
+                        const vel1 = Math.sqrt(
+                            Math.pow(seg1.x - seg1.prevX, 2) + 
+                            Math.pow(seg1.y - seg1.prevY, 2)
+                        );
+                        const vel2 = Math.sqrt(
+                            Math.pow(seg2.x - seg2.prevX, 2) + 
+                            Math.pow(seg2.y - seg2.prevY, 2)
+                        );
+                        
+                        // Apply damage based on velocity difference
+                        const velocityDiff = Math.abs(vel1 - vel2);
+                        
+                        // Only apply damage if velocity difference is significant
+                        if (velocityDiff > MIN_VELOCITY_FOR_DAMAGE) {
+                            // Calculate damage (capped at MAX_DAMAGE_PER_HIT)
+                            const rawDamage = (velocityDiff - MIN_VELOCITY_FOR_DAMAGE) * 0.5;
+                            const damage = Math.min(rawDamage, MAX_DAMAGE_PER_HIT);
+                            
+                            // Get canvas position for damage text
+                            const rect = canvas.getBoundingClientRect();
+                            const canvasX = rect.left + seg2.x;
+                            const canvasY = rect.top + seg2.y;
+                            
+                            if (vel1 > vel2) {
+                                sausage2.takeDamage(damage, canvasX, canvasY);
+                            } else {
+                                sausage1.takeDamage(damage, canvasX, canvasY);
+                            }
+                        }
+                        
+                        // Separate segments (but not the heads)
+                        if (i !== 0 && j !== 0) {
+                            const angle = Math.atan2(dy, dx);
+                            const overlap = 45 - distance;
+                            seg1.x += Math.cos(angle) * overlap * 0.5;
+                            seg1.y += Math.sin(angle) * overlap * 0.5;
+                            seg2.x -= Math.cos(angle) * overlap * 0.5;
+                            seg2.y -= Math.sin(angle) * overlap * 0.5;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update health bars
+        function updateHealthBars() {
+            document.getElementById('player1Health').style.width = 
+                (player1.health / player1.maxHealth * 100) + '%';
+            document.getElementById('player2Health').style.width = 
+                (player2.health / player2.maxHealth * 100) + '%';
+        }
+
+        // End game
+        function endGame(loser) {
+            gameRunning = false;
+            const winner = loser === player1 ? 'Bot' : 'Player';
+            document.getElementById('winnerText').textContent = winner + ' Wins!';
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // Restart game
+        function restartGame() {
+            player1.health = 100;
+            player1.damageCooldown = 0;
+            player1.hitFlash = 0;
+            player1.segments.forEach((seg, i) => {
+                seg.x = 300 + i * SEGMENT_LENGTH;
+                seg.y = 300;
+                seg.prevX = seg.x;
+                seg.prevY = seg.y;
+            });
+            
+            player2.health = 100;
+            player2.damageCooldown = 0;
+            player2.hitFlash = 0;
+            player2.segments.forEach((seg, i) => {
+                seg.x = 900 + i * SEGMENT_LENGTH;
+                seg.y = 300;
+                seg.prevX = seg.x;
+                seg.prevY = seg.y;
+            });
+            
+            gameRunning = true;
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        // Draw background
+        function drawBackground() {
+            // Sky
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#E0F6FF');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Ground
+            ctx.fillStyle = '#8B7355';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+
+            // Grass
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(0, canvas.height - 55, canvas.width, 10);
+        }
+
+        // Game loop
+        function gameLoop() {
+            drawBackground();
+
+            if (gameRunning) {
+                player1.update();
+                player2.update();
+                checkCollision(player1, player2);
+                updateHealthBars();
+            }
+
+            player1.draw();
+            player2.draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        gameLoop();
+    </script>
+</body>
+</html>
