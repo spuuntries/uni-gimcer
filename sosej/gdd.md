@@ -17,19 +17,18 @@ _"In Sosej, everyone's a wiener." 🌭_
 
 ## 📋 Table of Contents
 
-1. [High Concept](#high-concept)
-2. [Game Overview](#game-overview)
-3. [Core Gameplay Loop](#core-gameplay-loop)
-4. [Physics System](#physics-system)
-5. [Character Roster](#character-roster)
-6. [Combat System](#combat-system)
-7. [Game Modes](#game-modes)
-8. [Procedural Generation System](#procedural-generation-system)
-9. [Multiplayer Features](#multiplayer-features)
-10. [Progression & Unlockables](#progression--unlockables)
-11. [UI/UX Design](#uiux-design)
-12. [Technical Specifications](#technical-specifications)
-13. [Future Features & Roadmap](#future-features--roadmap)
+1. [High Concept](#-high-concept)
+2. [Game Overview](#-game-overview)
+3. [Core Gameplay Loop](#-core-gameplay-loop)
+4. [Physics System](#️-physics-system)
+5. [Character Roster](#-character-roster)
+6. [Combat System](#️-combat-system)
+7. [Game Modes](#-game-modes)
+8. [Procedural Generation System](#-procedural-generation-system)
+9. [UI/UX Design](#-uiux-design)
+10. [Future Features & Roadmap](#-future-features--roadmap)
+11. [Monetization Strategy](#-monetization-strategy)
+12. [Appendices](#-appendices)
 
 ---
 
