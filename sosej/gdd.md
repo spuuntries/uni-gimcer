@@ -1,17 +1,12 @@
 # 🌭 SOSEJ - Game Design Document
 
+_"In Sosej, everyone's a wiener." 🌭_
+
+**Status:** Living Document (updates ongoing)  
 **Genre:** Physics-Based Fighting Game  
 **Platform:** Web, Mobile-Ready  
-**Target Audience:** Casual gamers, ages 10+
-
----
-
-**Document Version:** 0.1  
-**Status:** Living Document (updates ongoing)
-
----
-
-_"In Sosej, everyone's a wiener." 🌭_
+**Target Audience:** Casual gamers, ages 10+  
+**Prototype:** [https://gimcer.spuun.art/](https://gimcer.spuun.art/)
 
 ---
 
@@ -289,6 +284,7 @@ Generate infinite unique sausages with balanced stats.
 #### Generation Parameters
 
 ```javascript
+// TODO: Probably gonna get revised lol, no promises
 {
   // Visual
   baseColor: HSL(random),
@@ -313,6 +309,7 @@ Generate infinite unique sausages with balanced stats.
 #### Stat Balancing Algorithm
 
 ```javascript
+// TODO: Probably gonna get revised lol, no promises
 function generateBalancedSausage() {
   const budget = 300;
 
@@ -401,6 +398,13 @@ function generateBalancedSausage() {
 - Primary: Purple gradient (#667eea → #764ba2)
 - Secondary: Warm browns, reds (sausage colors)
 - Accents: Yellow (hits), red (damage), green (health)
+
+### Main Design References
+
+1. **Sausage Legends**  
+   Main inspiration, most of the mechanics are derived from this game. We're targeting a pivot to a mobile-first segmentaiton, also
+   ![Sausage Legends](./gdd-assets/sausage-legends.jpg)
+2. ***
 
 ### Screen Hierarchy
 
