@@ -29,7 +29,7 @@ _"In Sosej, everyone's a wiener." 🌭_
 
 ## 🎯 High Concept
 
-**"Sosej"** is a physics-based fighting game where players control floppy sausages in competitive sausage-on-sausage combat. Using mouse/touch controls, players whip their sausage's head around while the body flops realistically behind them. Victory comes from building momentum and landing devastating hits on opponents in chaotic battles.
+**"Sosej"** is a physics-based fighting game where players control floppy sausages in competitive sausage-on-sausage combat. Using finger/hand controls, players whip their sausage's head around while the body flops realistically behind them. Victory comes from building momentum and landing devastating hits on opponents in chaotic battles.
 
 **Elevator Pitch:**
 _"Gang Beasts meets Getting Over It, but you're a sausage."_
@@ -40,7 +40,7 @@ _"Gang Beasts meets Getting Over It, but you're a sausage."_
 
 ### Core Philosophy
 
-**Accessible Depth**: Easy to pick up (move your mouse, move your hand), but mastery comes from understanding weight physics, momentum management, and timing.
+**Accessible Depth**: Easy to pick up (move your finger, move your hand), but mastery comes from understanding weight physics, momentum management, and timing.
 
 **Emergent Comedy**: The physics system naturally creates hilarious moments without forcing humor. (Fwiw also just, sausage, in general.)
 
@@ -252,15 +252,18 @@ NEUTRAL (loop)
 
 ### Planned Modes
 
-#### **Party Rumble** (2-4 players)
+#### **1v1 Duel**
+
+- 1v1 combat
+- First one to lose all health to lose
+
+#### **Party Rumble** (3-4 players)
 
 - Free-for-all combat
 - Last sausage standing
-- Shrinking arena boundaries
 
 #### **Tag Team** (2v2)
 
-- Swap between two characters
 - Combo potential with teammate
 - Shared health pool
 
@@ -502,14 +505,6 @@ function generateBalancedSausage() {
 └─────────────────────────────┘
 ```
 
-### Accessibility Features
-
-- **Colorblind Modes**: Deuteranopia, Protanopia, Tritanopia
-- **Screen Reader Support**: All menus navigable
-- **Scalable UI**: 80% - 150% size options
-- **Reduced Motion**: Toggle particle effects
-- **High Contrast Mode**: Increased outline visibility
-
 ---
 
 ### Analytics Events
@@ -563,15 +558,15 @@ function generateBalancedSausage() {
 
 ### A: Controls Reference
 
-**Mouse/Trackpad:**
-
-- Move hand = Control head position
-- Click = Shoot projectile (Salami only)
-
 **Touch (Mobile):**
 
 - Drag finger = Control head position
 - Tap = Shoot projectile (Salami only)
+
+**Augmented Reality**
+
+- Move hand = Control head position
+- Raise Thumb = Shoot projectile (Salami only)
 
 ### B: Glossary
 
