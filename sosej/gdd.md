@@ -40,7 +40,7 @@ _"Gang Beasts meets Getting Over It, but you're a sausage."_
 
 ### Core Philosophy
 
-**Accessible Depth**: Easy to pick up (move your mouse), but mastery comes from understanding weight physics, momentum management, and timing.
+**Accessible Depth**: Easy to pick up (move your mouse, move your hand), but mastery comes from understanding weight physics, momentum management, and timing.
 
 **Emergent Comedy**: The physics system naturally creates hilarious moments without forcing humor. (Fwiw also just, sausage, in general.)
 
@@ -60,7 +60,7 @@ _"Gang Beasts meets Getting Over It, but you're a sausage."_
 
 ### Micro Loop (Single Match)
 
-1. **Position** → Move cursor to build momentum
+1. **Position** → Move cursor/hand to build momentum
 2. **Accelerate** → Swing sausage in wide arcs
 3. **Collide** → Impact opponent with high-velocity segments
 4. **Adapt** → Read opponent's movement, adjust strategy
@@ -73,6 +73,12 @@ _"Gang Beasts meets Getting Over It, but you're a sausage."_
 3. **Earn Rewards** → Unlock new sausages, cosmetics, arenas
 4. **Upgrade/Customize** → Modify sausage appearance
 5. **Rematch/Queue** → Continue playing
+
+---
+
+## 🕸️ Mixed Reality
+
+**8th Wall Hand Tracking** as input for the movement on the virtual 3d game.
 
 ---
 
@@ -535,7 +541,6 @@ function generateBalancedSausage() {
 - 🔲 WebRTC implementation
 - 🔲 Matchmaking system
 - 🔲 Ranked mode
-- 🔲 Replay system
 - 🔲 Server infrastructure
 
 ### Phase 3: Content
@@ -544,39 +549,17 @@ function generateBalancedSausage() {
 - 🔲 5 new characters
 - 🔲 Procedural sausage generator
 - 🔲 Custom lobbies
-- 🔲 Tournament mode
 - 🔲 3 new arenas
 
 ### Phase 4: Polish
 
 - 🔲 Mobile optimization
-- 🔲 Battle pass system
 - 🔲 Cosmetics shop
-- 🔲 Achievement system
 - 🔲 Improved VFX
 
 ### Phase 5: Expansion
 
 - 🔲 Party modes (4 players)
-- 🔲 Map hazards & interactables
-- 🔲 Character customization
-- 🔲 Esports features
-- 🔲 Content creator tools
-
----
-
-## 📊 Monetization Strategy
-
-### Free-to-Play Model
-
-**Core Principle**: Never pay-to-win. All characters unlockable through gameplay.
-
-### Ethical Monetization
-
-- No energy systems
-- Clear pricing
-- Generous free rewards
-- All gameplay content earnable
 
 ---
 
