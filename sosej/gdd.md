@@ -49,7 +49,7 @@ _"Gang Beasts meets Getting Over It, but you're a sausage."_
 ### Unique Selling Points
 
 1. **Weight-Class Combat**: Characters feel genuinely different based on weight, not just stat changes
-2. **One-Input Control**: Entire character controlled by cursor position
+2. **One-Input Control**: Entire character controlled by finger/hand position
 3. **Momentum-Based Damage**: No button mashing - build speed, time your strikes
 4. **Procedural Sausage Generation**: Infinite character variety
 5. **Cross-Platform Multiplayer**: Web-based, no downloads required
@@ -60,7 +60,7 @@ _"Gang Beasts meets Getting Over It, but you're a sausage."_
 
 ### Micro Loop (Single Match)
 
-1. **Position** → Move cursor/hand to build momentum
+1. **Position** → Move finger/hand to build momentum
 2. **Accelerate** → Swing sausage in wide arcs
 3. **Collide** → Impact opponent with high-velocity segments
 4. **Adapt** → Read opponent's movement, adjust strategy
@@ -302,7 +302,7 @@ Training Input States:
   - Health differential
 
 Action Space:
-  - Cursor position adjustments (discretized grid)
+  - Position adjustments (discretized grid)
   - Movement patterns (aggressive/defensive/neutral)
 
 Reward Function:
@@ -392,7 +392,7 @@ function generateBalancedSausage() {
 
 **Movement Traits:**
 
-- **Rocket Boost**: Short dash in cursor direction (cooldown)
+- **Rocket Boost**: Short dash in finger/hand direction (cooldown)
 - **Afterimage**: Leaves trailing ghosts
 - **Bouncy**: Enhanced ground bounce
 - **Floaty**: Reduced gravity
@@ -565,7 +565,7 @@ function generateBalancedSausage() {
 
 **Mouse/Trackpad:**
 
-- Move cursor = Control head position
+- Move hand = Control head position
 - Click = Shoot projectile (Salami only)
 
 **Touch (Mobile):**
