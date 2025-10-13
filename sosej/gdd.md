@@ -78,7 +78,7 @@ _"Gang Beasts meets Getting Over It, but you're a sausage."_
 
 ## 🕸️ Mixed Reality
 
-We have two versions of the game, one where the 3d game is done in the usual 3d space on PC, and one in Augmented Reality mode. In this gamemode, **8th Wall Hand Tracking** as input for the movement on the virtual 3d game.
+We have two versions of the game, one where the 3d game is done in the usual 3d space on mobile, and one in Augmented Reality mode. In this gamemode, **8th Wall Hand Tracking** as input for the movement on the virtual 3d game.
 
 ![XR Version](./gdd-assets/xr-based.png)
 
