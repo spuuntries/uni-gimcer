@@ -454,7 +454,9 @@ function generateBalancedSausage() {
 1. **Sausage Legends**  
    Main inspiration, most of the mechanics are derived from this game. We're targeting a pivot to a mobile-first segmentaiton, also
    ![Sausage Legends](./gdd-assets/sausage-legends.jpg)
-2. ***
+2. **Gang Beasts**
+   The FFA style is inspired from Gang Beasts and ragdoll-esque physics, with the colorful flat aesthetics we'll be borrowing from it.
+   ![Gang Beasts](./gdd-assets/gang-beasts.png)
 
 ### Screen Hierarchy
 
