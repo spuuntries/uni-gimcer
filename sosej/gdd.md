@@ -2,10 +2,10 @@
 
 _"In Sosej, everyone's a wiener." 🌭_
 
-**Status:** Living Document (updates ongoing)  
-**Genre:** Physics-Based Fighting Game  
-**Platform:** Web, Mobile-Ready  
-**Target Audience:** Casual gamers, ages 10+  
+**Status:** Living Document (updates ongoing)
+**Genre:** Physics-Based Fighting Game
+**Platform:** Web, Mobile-Ready
+**Target Audience:** Casual gamers, ages 10+
 **Prototype:** [https://gimcer.spuun.art/](https://gimcer.spuun.art/)
 
 ---
@@ -31,7 +31,7 @@ _"In Sosej, everyone's a wiener." 🌭_
 
 **"Sosej"** is a physics-based fighting game where players control floppy sausages in competitive sausage-on-sausage combat. Using mouse/touch controls, players whip their sausage's head around while the body flops realistically behind them. Victory comes from building momentum and landing devastating hits on opponents in chaotic battles.
 
-**Elevator Pitch:**  
+**Elevator Pitch:**
 _"Gang Beasts meets Getting Over It, but you're a sausage."_
 
 ---
@@ -80,6 +80,8 @@ _"Gang Beasts meets Getting Over It, but you're a sausage."_
 
 **8th Wall Hand Tracking** as input for the movement on the virtual 3d game.
 
+![XR Version](./gdd-assets/xr-based.png)
+
 ---
 
 ## ⚙️ Physics System
@@ -89,8 +91,10 @@ _"Gang Beasts meets Getting Over It, but you're a sausage."_
 **Verlet Integration**: Chain-based physics where each sausage segment remembers its previous position, creating realistic swinging motion.
 
 ```
+
 Position Update:
-newPosition = currentPosition + (currentPosition - previousPosition) * damping + gravity
+newPosition = currentPosition + (currentPosition - previousPosition) \* damping + gravity
+
 ```
 
 ### Weight Classes
@@ -247,13 +251,6 @@ NEUTRAL (loop)
 - Practice mode
 
 ### Planned Modes
-
-#### **1v1 Ranked**
-
-- ELO-based matchmaking
-- Best of 3 rounds
-- Seasonal rankings
-- Character-specific leaderboards
 
 #### **Party Rumble** (2-4 players)
 
@@ -540,7 +537,6 @@ function generateBalancedSausage() {
 
 - 🔲 WebRTC implementation
 - 🔲 Matchmaking system
-- 🔲 Ranked mode
 - 🔲 Server infrastructure
 
 ### Phase 3: Content
