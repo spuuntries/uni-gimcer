@@ -1,4 +1,4 @@
-# 🕹️ Gim Cerdas
+# 🕶️ Extended Reality
 
 |           Name            | Student ID |
 | :-----------------------: | :--------: |
