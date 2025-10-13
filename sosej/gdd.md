@@ -2,10 +2,10 @@
 
 _"In Sosej, everyone's a wiener." 🌭_
 
-**Status:** Living Document (updates ongoing)
-**Genre:** Physics-Based Fighting Game
-**Platform:** Web, Mobile-Ready
-**Target Audience:** Casual gamers, ages 10+
+**Status:** Living Document (updates ongoing)  
+**Genre:** Physics-Based Fighting Game  
+**Platform:** Web, Mobile-Ready  
+**Target Audience:** Casual gamers, ages 10+  
 **Prototype:** [https://gimcer.spuun.art/](https://gimcer.spuun.art/)
 
 ---
@@ -78,7 +78,7 @@ _"Gang Beasts meets Getting Over It, but you're a sausage."_
 
 ## 🕸️ Mixed Reality
 
-**8th Wall Hand Tracking** as input for the movement on the virtual 3d game.
+We have two versions of the game, one where the 3d game is done in the usual 3d space on PC, and one in Augmented Reality mode. In this gamemode, **8th Wall Hand Tracking** as input for the movement on the virtual 3d game.
 
 ![XR Version](./gdd-assets/xr-based.png)
 
