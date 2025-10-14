@@ -1,0 +1,1669 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>Sosej 3D</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@400;600;700&display=swap");
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      body {
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        font-family: "Poppins", sans-serif;
+        touch-action: none;
+      }
+
+      #gameContainer {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        transition: transform 0.05s;
+      }
+
+      #gameContainer.shake {
+        animation: shake 0.5s;
+      }
+
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translate(0, 0);
+        }
+        10% {
+          transform: translate(-12px, 5px);
+        }
+        20% {
+          transform: translate(12px, -5px);
+        }
+        30% {
+          transform: translate(-10px, -5px);
+        }
+        40% {
+          transform: translate(10px, 5px);
+        }
+        50% {
+          transform: translate(-12px, -5px);
+        }
+        60% {
+          transform: translate(12px, 5px);
+        }
+        70% {
+          transform: translate(-10px, 5px);
+        }
+        80% {
+          transform: translate(10px, -5px);
+        }
+        90% {
+          transform: translate(-6px, 4px);
+        }
+      }
+
+      #renderer {
+        display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      #renderer.active {
+        display: block;
+      }
+
+      /* Character Selection Screen */
+      #characterSelect {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        max-width: 95vw;
+        max-height: 95vh;
+        overflow-y: auto;
+        width: 100%;
+      }
+
+      #characterSelect.hidden {
+        display: none;
+      }
+
+      #characterSelect h1 {
+        font-family: "Bangers", cursive;
+        font-size: clamp(32px, 8vw, 72px);
+        color: #764ba2;
+        margin-bottom: 10px;
+        text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.1);
+        letter-spacing: 2px;
+      }
+
+      #characterSelect .subtitle {
+        font-size: clamp(14px, 3vw, 18px);
+        color: #666;
+        margin-bottom: 20px;
+      }
+
+      .characterGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .characterCard {
+        background: white;
+        border: 4px solid #ddd;
+        border-radius: 15px;
+        padding: 15px 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        min-height: 180px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .characterCard:active {
+        transform: scale(0.95);
+      }
+
+      .characterCard.selected {
+        border-color: #667eea;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        transform: scale(1.05);
+      }
+
+      .characterCard .icon {
+        font-size: 40px;
+        margin-bottom: 8px;
+      }
+
+      .characterCard .name {
+        font-weight: 700;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+
+      .characterCard .type {
+        font-size: 10px;
+        color: #888;
+        margin-bottom: 10px;
+        min-height: 25px;
+      }
+
+      .characterCard.selected .type {
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .characterCard .stats {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        font-size: 9px;
+        text-align: left;
+        margin-top: auto;
+      }
+
+      .stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .stat span {
+        white-space: nowrap;
+        min-width: 45px;
+      }
+
+      .statBar {
+        flex: 1;
+        height: 5px;
+        background: #ddd;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+
+      .statBarFill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 3px;
+      }
+
+      .characterCard.selected .statBar {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .characterCard.selected .statBarFill {
+        background: linear-gradient(90deg, #fff, #f0f0f0);
+      }
+
+      #startButton {
+        padding: 15px 40px;
+        font-size: clamp(18px, 4vw, 24px);
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        font-family: "Bangers", cursive;
+        letter-spacing: 1px;
+      }
+
+      #startButton:active:not(:disabled) {
+        transform: scale(0.95);
+      }
+
+      #startButton:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* In-Game UI */
+      #ui {
+        position: absolute;
+        top: 10px;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 10px;
+        pointer-events: none;
+        z-index: 100;
+      }
+
+      .playerInfo {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 12px 15px;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        min-width: clamp(140px, 30vw, 280px);
+        border: 2px solid #fff;
+      }
+
+      .playerHeader {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .playerIcon {
+        font-size: clamp(20px, 5vw, 32px);
+      }
+
+      .playerDetails {
+        flex: 1;
+      }
+
+      .playerName {
+        font-weight: 700;
+        font-size: clamp(14px, 3vw, 20px);
+        color: #333;
+        font-family: "Bangers", cursive;
+        letter-spacing: 1px;
+      }
+
+      .playerType {
+        font-size: clamp(10px, 2vw, 12px);
+        color: #666;
+      }
+
+      .healthBarContainer {
+        width: 100%;
+        height: clamp(20px, 5vw, 30px);
+        background: #e0e0e0;
+        border-radius: 15px;
+        overflow: hidden;
+        border: 2px solid #333;
+        position: relative;
+      }
+
+      .healthBar {
+        height: 100%;
+        transition: width 0.3s ease;
+        border-radius: 15px;
+        background: linear-gradient(90deg, #ff6b6b, #ee5a6f);
+      }
+
+      .player2Health {
+        background: linear-gradient(90deg, #4ecdc4, #44a08d);
+      }
+
+      .healthText {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-weight: 700;
+        font-size: clamp(10px, 2.5vw, 14px);
+        color: white;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        z-index: 1;
+      }
+
+      #gameOver {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.98);
+        padding: 30px 40px;
+        border-radius: 25px;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        display: none;
+        border: 5px solid #667eea;
+        z-index: 200;
+        max-width: 90vw;
+      }
+
+      #gameOver h1 {
+        font-family: "Bangers", cursive;
+        font-size: clamp(32px, 8vw, 64px);
+        margin-bottom: 15px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      #gameOver .winner {
+        font-size: clamp(16px, 4vw, 24px);
+        color: #666;
+        margin-bottom: 20px;
+      }
+
+      #gameOver button {
+        padding: 15px 40px;
+        font-size: clamp(16px, 4vw, 22px);
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        pointer-events: all;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        font-family: "Bangers", cursive;
+        letter-spacing: 1px;
+      }
+
+      #gameOver button:active {
+        transform: scale(0.95);
+      }
+
+      #controls {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.95);
+        padding: 10px 20px;
+        border-radius: 50px;
+        text-align: center;
+        font-size: clamp(10px, 2.5vw, 14px);
+        color: #333;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        border: 2px solid #fff;
+        z-index: 100;
+        max-width: 90vw;
+      }
+
+      .damageText {
+        position: absolute;
+        color: #ff4444;
+        font-weight: 900;
+        font-size: clamp(24px, 6vw, 32px);
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+        animation: floatUp 1s ease-out forwards;
+        font-family: "Bangers", cursive;
+        z-index: 150;
+      }
+
+      @keyframes floatUp {
+        0% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-60px) scale(1.2);
+        }
+      }
+
+      /* Touch indicator */
+      .touchIndicator {
+        position: absolute;
+        width: 60px;
+        height: 60px;
+        border: 3px solid rgba(255, 255, 255, 0.8);
+        border-radius: 50%;
+        background: rgba(102, 126, 234, 0.3);
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        z-index: 150;
+        display: none;
+      }
+
+      .touchIndicator.active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="touchIndicator" id="touchIndicator"></div>
+
+    <!-- Character Selection Screen -->
+    <div id="characterSelect">
+      <h1>🌭 SOSEJ 3D 🌭</h1>
+      <p class="subtitle">Choose Your Fighter!</p>
+
+      <div class="characterGrid">
+        <div class="characterCard" data-character="frankfurter">
+          <div class="icon">🌭</div>
+          <div class="name">Frankfurter</div>
+          <div class="type">Quick Jabs</div>
+          <div class="stats">
+            <div class="stat">
+              <span>Speed:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 90%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Power:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 60%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Stiffness:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 50%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="characterCard" data-character="bratwurst">
+          <div class="icon">🥖</div>
+          <div class="name">Bratwurst</div>
+          <div class="type">Heavy Hitter</div>
+          <div class="stats">
+            <div class="stat">
+              <span>Speed:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 40%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Power:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 100%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Stiffness:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 90%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="characterCard" data-character="chorizo">
+          <div class="icon">🌶️</div>
+          <div class="name">Chorizo</div>
+          <div class="type">Flame Attacks</div>
+          <div class="stats">
+            <div class="stat">
+              <span>Speed:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 95%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Power:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 70%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Stiffness:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 30%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="characterCard" data-character="boudin">
+          <div class="icon">⚪</div>
+          <div class="name">Boudin Blanc</div>
+          <div class="type">Graceful Sweeps</div>
+          <div class="stats">
+            <div class="stat">
+              <span>Speed:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 75%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Power:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 75%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Stiffness:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 60%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="characterCard" data-character="salami">
+          <div class="icon">🔴</div>
+          <div class="name">Salami</div>
+          <div class="type">Projectile Master</div>
+          <div class="stats">
+            <div class="stat">
+              <span>Speed:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 70%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Power:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 65%"></div>
+              </div>
+            </div>
+            <div class="stat">
+              <span>Stiffness:</span>
+              <div class="statBar">
+                <div class="statBarFill" style="width: 70%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button id="startButton" disabled>SELECT A CHARACTER</button>
+    </div>
+
+    <div id="gameContainer">
+      <div id="renderer"></div>
+
+      <div id="ui">
+        <div class="playerInfo">
+          <div class="playerHeader">
+            <div class="playerIcon" id="player1Icon">🌭</div>
+            <div class="playerDetails">
+              <div class="playerName" id="player1Name">Player</div>
+              <div class="playerType" id="player1Type">Frankfurter</div>
+            </div>
+          </div>
+          <div class="healthBarContainer">
+            <div class="healthText" id="player1HealthText">100 / 100</div>
+            <div
+              class="healthBar player1Health"
+              id="player1Health"
+              style="width: 100%"
+            ></div>
+          </div>
+        </div>
+        <div class="playerInfo">
+          <div class="playerHeader">
+            <div class="playerIcon" id="player2Icon">🤖</div>
+            <div class="playerDetails">
+              <div class="playerName" id="player2Name">Bot</div>
+              <div class="playerType" id="player2Type">Random</div>
+            </div>
+          </div>
+          <div class="healthBarContainer">
+            <div class="healthText" id="player2HealthText">100 / 100</div>
+            <div
+              class="healthBar player2Health"
+              id="player2Health"
+              style="width: 100%"
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="gameOver">
+        <h1 id="winnerText">VICTORY!</h1>
+        <p class="winner" id="winnerSubtext">Player Wins!</p>
+        <button onclick="backToMenu()">Back to Menu</button>
+      </div>
+
+      <div id="controls">
+        <strong>👆 Drag to flop your sosej! • Tap to shoot (Salami)</strong>
+      </div>
+    </div>
+
+    <!-- Three.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+      // ========================================
+      // GLOBAL VARIABLES & SETUP
+      // ========================================
+
+      const gameContainer = document.getElementById("gameContainer");
+      const rendererContainer = document.getElementById("renderer");
+      const characterSelect = document.getElementById("characterSelect");
+      const touchIndicator = document.getElementById("touchIndicator");
+
+      let scene, camera, renderer;
+      let player1, player2;
+      let projectiles = [];
+      let gameRunning = false;
+      let timeScale = 1.0;
+      let freezeFrameTimer = 0;
+      let slowMoTimer = 0;
+
+      // Touch/Mouse input
+      let inputX = 0;
+      let inputY = 0;
+      let inputZ = 0;
+      let touching = false;
+
+      // Character definitions
+      const CHARACTERS = {
+        frankfurter: {
+          name: "Frankfurter",
+          icon: "🌭",
+          color: 0xd2691e,
+          weight: 0.3,
+          responsiveness: 0.25,
+          damage: 0.8,
+          health: 100,
+          segments: 8,
+          segmentWeight: 0.95,
+          stiffness: 0.5,
+          description: "Quick Jabs",
+        },
+        bratwurst: {
+          name: "Bratwurst",
+          icon: "🥖",
+          color: 0x8b6914,
+          weight: 1.0,
+          responsiveness: 0.08,
+          damage: 1.8,
+          health: 140,
+          segments: 10,
+          segmentWeight: 1.5,
+          stiffness: 0.9,
+          description: "Heavy Hitter",
+        },
+        chorizo: {
+          name: "Chorizo",
+          icon: "🌶️",
+          color: 0xdc143c,
+          weight: 0.25,
+          responsiveness: 0.3,
+          damage: 1.0,
+          health: 85,
+          segments: 7,
+          segmentWeight: 0.8,
+          stiffness: 0.3,
+          description: "Flame Attacks",
+          hasFlames: true,
+        },
+        boudin: {
+          name: "Boudin Blanc",
+          icon: "⚪",
+          color: 0xf5f5dc,
+          weight: 0.5,
+          responsiveness: 0.18,
+          damage: 1.0,
+          health: 100,
+          segments: 9,
+          segmentWeight: 1.0,
+          stiffness: 0.6,
+          description: "Graceful Sweeps",
+          elegant: true,
+        },
+        salami: {
+          name: "Salami",
+          icon: "🔴",
+          color: 0x8b0000,
+          weight: 0.6,
+          responsiveness: 0.15,
+          damage: 0.9,
+          health: 110,
+          segments: 8,
+          segmentWeight: 1.1,
+          stiffness: 0.7,
+          description: "Projectile Master",
+          hasProjectiles: true,
+        },
+      };
+
+      let selectedCharacter = null;
+      let player1Character = null;
+      let player2Character = null;
+
+      // Physics constants
+      const BASE_GRAVITY = 0.4;
+      const DAMPING = 0.96;
+      const SEGMENT_LENGTH = 3;
+      const MAX_DAMAGE_PER_HIT = 15;
+      const MIN_VELOCITY_FOR_DAMAGE = 5;
+      const DAMAGE_COOLDOWN = 20;
+
+      // ========================================
+      // CHARACTER SELECTION
+      // ========================================
+
+      document.querySelectorAll(".characterCard").forEach((card) => {
+        card.addEventListener("click", () => {
+          document
+            .querySelectorAll(".characterCard")
+            .forEach((c) => c.classList.remove("selected"));
+          card.classList.add("selected");
+          selectedCharacter = card.dataset.character;
+          document.getElementById("startButton").disabled = false;
+          document.getElementById("startButton").textContent = "START GAME";
+        });
+      });
+
+      document.getElementById("startButton").addEventListener("click", () => {
+        if (selectedCharacter) {
+          startGame();
+        }
+      });
+
+      function backToMenu() {
+        characterSelect.classList.remove("hidden");
+        rendererContainer.classList.remove("active");
+        document.getElementById("gameOver").style.display = "none";
+        gameRunning = false;
+
+        // Clean up Three.js
+        if (renderer) {
+          renderer.dispose();
+          while (rendererContainer.firstChild) {
+            rendererContainer.removeChild(rendererContainer.firstChild);
+          }
+        }
+      }
+
+      function startGame() {
+        const characterKeys = Object.keys(CHARACTERS);
+        const randomBot =
+          characterKeys[Math.floor(Math.random() * characterKeys.length)];
+
+        player1Character = selectedCharacter;
+        player2Character = randomBot;
+
+        const p1Char = CHARACTERS[player1Character];
+        const p2Char = CHARACTERS[player2Character];
+
+        document.getElementById("player1Icon").textContent = p1Char.icon;
+        document.getElementById("player1Name").textContent = "Player";
+        document.getElementById("player1Type").textContent = p1Char.name;
+
+        document.getElementById("player2Icon").textContent = p2Char.icon;
+        document.getElementById("player2Name").textContent = "Bot";
+        document.getElementById("player2Type").textContent = p2Char.name;
+
+        characterSelect.classList.add("hidden");
+        rendererContainer.classList.add("active");
+
+        initializeGame();
+      }
+
+      // ========================================
+      // THREE.JS SETUP
+      // ========================================
+
+      function initThreeJS() {
+        // Scene
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb);
+        scene.fog = new THREE.Fog(0x87ceeb, 50, 150);
+
+        // Camera
+        camera = new THREE.PerspectiveCamera(
+          60,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          1000
+        );
+        camera.position.set(0, 25, 50);
+        camera.lookAt(0, 10, 0);
+
+        // Renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        rendererContainer.appendChild(renderer.domElement);
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 30, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.left = -50;
+        directionalLight.shadow.camera.right = 50;
+        directionalLight.shadow.camera.top = 50;
+        directionalLight.shadow.camera.bottom = -50;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
+
+        // Ground
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshStandardMaterial({
+          color: 0x90ee90,
+          roughness: 0.8,
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Arena bounds (invisible walls)
+        const arenaSize = 40;
+        const wallGeometry = new THREE.BoxGeometry(1, 30, arenaSize);
+        const wallMaterial = new THREE.MeshBasicMaterial({
+          transparent: true,
+          opacity: 0,
+        });
+
+        const wall1 = new THREE.Mesh(wallGeometry, wallMaterial);
+        wall1.position.set(-arenaSize / 2, 15, 0);
+        scene.add(wall1);
+
+        const wall2 = new THREE.Mesh(wallGeometry, wallMaterial);
+        wall2.position.set(arenaSize / 2, 15, 0);
+        scene.add(wall2);
+
+        const wall3 = new THREE.Mesh(
+          wallGeometry.clone().rotateY(Math.PI / 2),
+          wallMaterial
+        );
+        wall3.position.set(0, 15, -arenaSize / 2);
+        scene.add(wall3);
+
+        const wall4 = new THREE.Mesh(
+          wallGeometry.clone().rotateY(Math.PI / 2),
+          wallMaterial
+        );
+        wall4.position.set(0, 15, arenaSize / 2);
+        scene.add(wall4);
+
+        // Handle window resize
+        window.addEventListener("resize", onWindowResize, false);
+      }
+
+      function onWindowResize() {
+        if (!camera || !renderer) return;
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      // ========================================
+      // INPUT HANDLING
+      // ========================================
+
+      function setupInputHandlers() {
+        // Touch events
+        rendererContainer.addEventListener("touchstart", handleTouchStart, {
+          passive: false,
+        });
+        rendererContainer.addEventListener("touchmove", handleTouchMove, {
+          passive: false,
+        });
+        rendererContainer.addEventListener("touchend", handleTouchEnd, {
+          passive: false,
+        });
+
+        // Mouse events (for desktop testing)
+        rendererContainer.addEventListener("mousedown", handleMouseDown);
+        rendererContainer.addEventListener("mousemove", handleMouseMove);
+        rendererContainer.addEventListener("mouseup", handleMouseUp);
+        rendererContainer.addEventListener("click", handleClick);
+      }
+
+      function handleTouchStart(e) {
+        e.preventDefault();
+        touching = true;
+        const touch = e.touches[0];
+        updateInputPosition(touch.clientX, touch.clientY);
+        showTouchIndicator(touch.clientX, touch.clientY);
+      }
+
+      function handleTouchMove(e) {
+        e.preventDefault();
+        if (!touching) return;
+        const touch = e.touches[0];
+        updateInputPosition(touch.clientX, touch.clientY);
+        showTouchIndicator(touch.clientX, touch.clientY);
+      }
+
+      function handleTouchEnd(e) {
+        e.preventDefault();
+        touching = false;
+        hideTouchIndicator();
+
+        // Check if it was a tap (for projectile shooting)
+        if (
+          player1 &&
+          player1.hasProjectiles &&
+          player1.projectileCooldown === 0 &&
+          gameRunning
+        ) {
+          player1.shootProjectile();
+        }
+      }
+
+      function handleMouseDown(e) {
+        touching = true;
+        updateInputPosition(e.clientX, e.clientY);
+      }
+
+      function handleMouseMove(e) {
+        if (!touching && gameRunning) {
+          updateInputPosition(e.clientX, e.clientY);
+        }
+      }
+
+      function handleMouseUp(e) {
+        touching = false;
+      }
+
+      function handleClick(e) {
+        if (
+          player1 &&
+          player1.hasProjectiles &&
+          player1.projectileCooldown === 0 &&
+          gameRunning
+        ) {
+          player1.shootProjectile();
+        }
+      }
+
+      function updateInputPosition(clientX, clientY) {
+        // Convert screen coordinates to 3D world position
+        const rect = rendererContainer.getBoundingClientRect();
+        const x = ((clientX - rect.left) / rect.width) * 2 - 1;
+        const y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+        // Raycast to find 3D position at y=10 plane
+        const vector = new THREE.Vector3(x, y, 0.5);
+        vector.unproject(camera);
+
+        const dir = vector.sub(camera.position).normalize();
+        const distance = (10 - camera.position.y) / dir.y;
+        const pos = camera.position.clone().add(dir.multiplyScalar(distance));
+
+        inputX = Math.max(-35, Math.min(35, pos.x));
+        inputY = 10; // Keep at consistent height
+        inputZ = Math.max(-35, Math.min(35, pos.z));
+      }
+
+      function showTouchIndicator(x, y) {
+        touchIndicator.style.left = x + "px";
+        touchIndicator.style.top = y + "px";
+        touchIndicator.classList.add("active");
+      }
+
+      function hideTouchIndicator() {
+        touchIndicator.classList.remove("active");
+      }
+
+      // ========================================
+      // PROJECTILE CLASS
+      // ========================================
+
+      class Projectile {
+        constructor(x, y, z, vx, vy, vz, owner) {
+          this.position = { x, y, z };
+          this.velocity = { x: vx, y: vy, z: vz };
+          this.owner = owner;
+          this.radius = 0.8;
+          this.lifetime = 120;
+
+          // Create mesh
+          const geometry = new THREE.SphereGeometry(this.radius, 16, 16);
+          const material = new THREE.MeshStandardMaterial({
+            color: 0x8b0000,
+            emissive: 0x4b0000,
+          });
+          this.mesh = new THREE.Mesh(geometry, material);
+          this.mesh.castShadow = true;
+          this.mesh.position.set(x, y, z);
+          scene.add(this.mesh);
+        }
+
+        update() {
+          this.position.x += this.velocity.x * timeScale;
+          this.position.y += this.velocity.y * timeScale;
+          this.position.z += this.velocity.z * timeScale;
+
+          this.velocity.y -= BASE_GRAVITY * 0.5 * timeScale;
+
+          this.mesh.position.set(
+            this.position.x,
+            this.position.y,
+            this.position.z
+          );
+
+          this.lifetime--;
+
+          if (this.position.y < 0 || this.lifetime <= 0) {
+            scene.remove(this.mesh);
+            return false;
+          }
+
+          return true;
+        }
+
+        destroy() {
+          scene.remove(this.mesh);
+        }
+      }
+
+      // ========================================
+      // SAUSAGE CLASS (3D)
+      // ========================================
+
+      class Sausage {
+        constructor(x, y, z, characterType, isBot = false) {
+          const char = CHARACTERS[characterType];
+          this.characterType = characterType;
+          this.segments = [];
+          this.meshes = [];
+          this.color = char.color;
+          this.health = char.health;
+          this.maxHealth = char.health;
+          this.isBot = isBot;
+          this.targetX = x;
+          this.targetY = y;
+          this.targetZ = z;
+          this.headX = x;
+          this.headY = y;
+          this.headZ = z;
+          this.damageCooldown = 0;
+          this.invincibilityFrames = 0;
+          this.hitFlash = 0;
+          this.weight = char.weight;
+          this.responsiveness = char.responsiveness;
+          this.damageMultiplier = char.damage;
+          this.segmentWeight = char.segmentWeight;
+          this.stiffness = char.stiffness;
+          this.hasFlames = char.hasFlames;
+          this.elegant = char.elegant;
+          this.hasProjectiles = char.hasProjectiles;
+          this.projectileCooldown = 0;
+
+          // Create segments
+          const numSegments = char.segments;
+          const segmentRadius = 0.6 + this.weight * 0.3;
+
+          for (let i = 0; i < numSegments; i++) {
+            this.segments.push({
+              x: x + i * SEGMENT_LENGTH,
+              y: y,
+              z: z,
+              prevX: x + i * SEGMENT_LENGTH,
+              prevY: y,
+              prevZ: z,
+            });
+
+            // Create mesh for segment
+            const geometry = new THREE.CylinderGeometry(
+              segmentRadius,
+              segmentRadius,
+              SEGMENT_LENGTH,
+              16
+            );
+            const material = new THREE.MeshStandardMaterial({
+              color: this.color,
+              roughness: 0.6,
+              metalness: 0.1,
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+            this.meshes.push(mesh);
+          }
+
+          // Create eyes (on head segment)
+          this.createEyes();
+
+          // Bot AI
+          this.botAngle = Math.random() * Math.PI * 2;
+          this.botRadius = 15;
+          this.botSpeed = 0.04;
+          this.botCenterX = isBot ? 20 : -20;
+          this.botCenterY = 10;
+          this.botCenterZ = 0;
+        }
+
+        createEyes() {
+          const eyeGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+          const whiteMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+          });
+          const blackMaterial = new THREE.MeshStandardMaterial({
+            color: 0x000000,
+          });
+
+          this.leftEye = new THREE.Group();
+          const leftWhite = new THREE.Mesh(eyeGeometry, whiteMaterial);
+          const leftPupil = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1, 8, 8),
+            blackMaterial
+          );
+          leftPupil.position.z = 0.15;
+          this.leftEye.add(leftWhite);
+          this.leftEye.add(leftPupil);
+          scene.add(this.leftEye);
+
+          this.rightEye = new THREE.Group();
+          const rightWhite = new THREE.Mesh(eyeGeometry, whiteMaterial);
+          const rightPupil = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1, 8, 8),
+            blackMaterial
+          );
+          rightPupil.position.z = 0.15;
+          this.rightEye.add(rightWhite);
+          this.rightEye.add(rightPupil);
+          scene.add(this.rightEye);
+        }
+
+        getCollisionRadius() {
+          const baseWidth = 0.6;
+          return (baseWidth + this.weight * 0.3) * 1.5;
+        }
+
+        update() {
+          if (this.damageCooldown > 0) this.damageCooldown--;
+          if (this.invincibilityFrames > 0) this.invincibilityFrames--;
+          if (this.hitFlash > 0) this.hitFlash--;
+          if (this.projectileCooldown > 0) this.projectileCooldown--;
+
+          if (this.isBot) {
+            this.botAngle += this.botSpeed * timeScale;
+            this.targetX =
+              this.botCenterX + Math.cos(this.botAngle) * this.botRadius;
+            this.targetZ =
+              this.botCenterZ + Math.sin(this.botAngle) * this.botRadius;
+            this.targetY = this.botCenterY;
+
+            if (Math.random() < 0.01 * timeScale) {
+              this.botRadius = 10 + Math.random() * 20;
+              this.botSpeed = 0.02 + Math.random() * 0.06;
+            }
+
+            if (
+              this.hasProjectiles &&
+              this.projectileCooldown === 0 &&
+              Math.random() < 0.02 * timeScale
+            ) {
+              this.shootProjectile();
+            }
+          } else {
+            this.targetX = inputX;
+            this.targetY = inputY;
+            this.targetZ = inputZ;
+          }
+
+          // Head follows target
+          const dx = this.targetX - this.headX;
+          const dy = this.targetY - this.headY;
+          const dz = this.targetZ - this.headZ;
+
+          this.headX += dx * this.responsiveness * timeScale;
+          this.headY += dy * this.responsiveness * timeScale;
+          this.headZ += dz * this.responsiveness * timeScale;
+
+          // Update first segment
+          const head = this.segments[0];
+          head.prevX = head.x;
+          head.prevY = head.y;
+          head.prevZ = head.z;
+          head.x = this.headX;
+          head.y = this.headY;
+          head.z = this.headZ;
+
+          // Verlet integration for other segments
+          const gravity = BASE_GRAVITY * this.segmentWeight * timeScale;
+
+          for (let i = 1; i < this.segments.length; i++) {
+            const segment = this.segments[i];
+            const tempX = segment.x;
+            const tempY = segment.y;
+            const tempZ = segment.z;
+
+            const dampingFactor = DAMPING - this.weight * 0.05;
+            const velocityScale = Math.pow(dampingFactor, timeScale);
+
+            segment.x += (segment.x - segment.prevX) * velocityScale;
+            segment.y += (segment.y - segment.prevY) * velocityScale;
+            segment.z += (segment.z - segment.prevZ) * velocityScale;
+            segment.y -= gravity;
+
+            segment.prevX = tempX;
+            segment.prevY = tempY;
+            segment.prevZ = tempZ;
+          }
+
+          // Constrain segments with stiffness
+          const constraintIterations = Math.floor(3 + this.stiffness * 5);
+
+          for (
+            let iteration = 0;
+            iteration < constraintIterations;
+            iteration++
+          ) {
+            for (let i = 0; i < this.segments.length - 1; i++) {
+              const seg1 = this.segments[i];
+              const seg2 = this.segments[i + 1];
+
+              const dx = seg2.x - seg1.x;
+              const dy = seg2.y - seg1.y;
+              const dz = seg2.z - seg1.z;
+              const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+              if (distance > 0) {
+                const difference = SEGMENT_LENGTH - distance;
+                const percent =
+                  (difference / distance / 2) * (0.5 + this.stiffness * 0.5);
+                const offsetX = dx * percent;
+                const offsetY = dy * percent;
+                const offsetZ = dz * percent;
+
+                if (i !== 0) {
+                  seg1.x -= offsetX;
+                  seg1.y -= offsetY;
+                  seg1.z -= offsetZ;
+                }
+                seg2.x += offsetX;
+                seg2.y += offsetY;
+                seg2.z += offsetZ;
+              }
+            }
+          }
+
+          // Boundaries
+          for (let i = 1; i < this.segments.length; i++) {
+            const segment = this.segments[i];
+
+            if (segment.y < 1) {
+              segment.y = 1;
+              const bounceDamping = 0.3 * (1 - this.weight * 0.5);
+              segment.prevY =
+                segment.y - (segment.y - segment.prevY) * bounceDamping;
+            }
+
+            const maxPos = 35;
+            if (segment.x < -maxPos) segment.x = -maxPos;
+            if (segment.x > maxPos) segment.x = maxPos;
+            if (segment.z < -maxPos) segment.z = -maxPos;
+            if (segment.z > maxPos) segment.z = maxPos;
+          }
+
+          // Update meshes
+          this.updateMeshes();
+        }
+
+        updateMeshes() {
+          for (let i = 0; i < this.segments.length - 1; i++) {
+            const seg1 = this.segments[i];
+            const seg2 = this.segments[i + 1];
+            const mesh = this.meshes[i];
+
+            // Position at midpoint
+            mesh.position.x = (seg1.x + seg2.x) / 2;
+            mesh.position.y = (seg1.y + seg2.y) / 2;
+            mesh.position.z = (seg1.z + seg2.z) / 2;
+
+            // Rotation to point from seg1 to seg2
+            const dx = seg2.x - seg1.x;
+            const dy = seg2.y - seg1.y;
+            const dz = seg2.z - seg1.z;
+
+            const theta = Math.atan2(dx, dz);
+            const phi = Math.atan2(Math.sqrt(dx * dx + dz * dz), dy);
+
+            mesh.rotation.y = theta;
+            mesh.rotation.x = phi - Math.PI / 2;
+
+            // Flash effect
+            if (this.hitFlash > 0) {
+              mesh.material.emissive.setHex(0xffff00);
+              mesh.material.emissiveIntensity = 0.5;
+            } else {
+              mesh.material.emissive.setHex(0x000000);
+            }
+
+            // Invincibility flashing
+            if (this.invincibilityFrames > 0) {
+              const flashCycle = Math.floor(this.invincibilityFrames / 10) % 2;
+              mesh.material.opacity = flashCycle === 0 ? 0.5 : 1.0;
+              mesh.material.transparent = true;
+            } else {
+              mesh.material.opacity = 1.0;
+              mesh.material.transparent = false;
+            }
+          }
+
+          // Update eyes
+          const head = this.segments[0];
+          const neck = this.segments[1];
+
+          const dirX = neck.x - head.x;
+          const dirY = neck.y - head.y;
+          const dirZ = neck.z - head.z;
+          const len = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+
+          if (len > 0) {
+            const normX = dirX / len;
+            const normY = dirY / len;
+            const normZ = dirZ / len;
+
+            const eyeOffset = 0.8;
+            const eyeDistance = 0.5;
+
+            this.leftEye.position.set(
+              head.x + normX * eyeOffset + normZ * eyeDistance,
+              head.y + normY * eyeOffset,
+              head.z + normZ * eyeOffset - normX * eyeDistance
+            );
+
+            this.rightEye.position.set(
+              head.x + normX * eyeOffset - normZ * eyeDistance,
+              head.y + normY * eyeOffset,
+              head.z + normZ * eyeOffset + normX * eyeDistance
+            );
+          }
+        }
+
+        shootProjectile() {
+          const head = this.segments[0];
+          const neck = this.segments[1];
+          const dx = neck.x - head.x;
+          const dy = neck.y - head.y;
+          const dz = neck.z - head.z;
+          const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+          if (len > 0) {
+            const speed = 8;
+            projectiles.push(
+              new Projectile(
+                head.x,
+                head.y,
+                head.z,
+                (-dx / len) * speed,
+                (-dy / len) * speed,
+                (-dz / len) * speed,
+                this
+              )
+            );
+            this.projectileCooldown = 60;
+          }
+        }
+
+        takeDamage(amount, worldX, worldY, worldZ) {
+          if (this.invincibilityFrames > 0) return;
+
+          if (this.damageCooldown === 0) {
+            const defenseFactor = 1 - this.weight * 0.3;
+            const actualDamage = amount * defenseFactor;
+            this.health -= actualDamage;
+            this.damageCooldown = DAMAGE_COOLDOWN;
+            this.hitFlash = 10;
+            this.invincibilityFrames = 300;
+
+            triggerHitStop(actualDamage);
+            showDamageText(actualDamage, worldX, worldY, worldZ);
+
+            if (this.health <= 0) {
+              this.health = 0;
+              endGame(this);
+            }
+          }
+        }
+
+        destroy() {
+          this.meshes.forEach((mesh) => scene.remove(mesh));
+          scene.remove(this.leftEye);
+          scene.remove(this.rightEye);
+        }
+      }
+
+      // ========================================
+      // GAME LOGIC
+      // ========================================
+
+      function initializeGame() {
+        initThreeJS();
+        setupInputHandlers();
+
+        player1 = new Sausage(-15, 10, 0, player1Character, false);
+        player2 = new Sausage(15, 10, 0, player2Character, true);
+
+        projectiles = [];
+        timeScale = 1.0;
+        freezeFrameTimer = 0;
+        slowMoTimer = 0;
+        gameRunning = true;
+
+        // Start with default input position
+        inputX = -15;
+        inputY = 10;
+        inputZ = 0;
+
+        gameLoop();
+      }
+
+      function triggerHitStop(damage) {
+        const intensity = Math.min(damage / MAX_DAMAGE_PER_HIT, 1);
+        freezeFrameTimer = Math.floor(40 + intensity * 30);
+        slowMoTimer = Math.floor(600 + intensity * 300);
+
+        gameContainer.classList.add("shake");
+        setTimeout(() => gameContainer.classList.remove("shake"), 500);
+      }
+
+      function updateTimeScale() {
+        if (freezeFrameTimer > 0) {
+          freezeFrameTimer--;
+          timeScale = 0;
+        } else if (slowMoTimer > 0) {
+          slowMoTimer--;
+          const progress = slowMoTimer / 900;
+          timeScale = 0.1 + (1 - progress) * 0.9;
+        } else {
+          timeScale = 1.0;
+        }
+      }
+
+      function checkCollision(sausage1, sausage2) {
+        const radius1 = sausage1.getCollisionRadius();
+        const radius2 = sausage2.getCollisionRadius();
+        const collisionDistance = radius1 + radius2;
+
+        const step1 = Math.max(1, Math.floor(sausage1.segments.length / 6));
+        const step2 = Math.max(1, Math.floor(sausage2.segments.length / 6));
+
+        for (let i = 0; i < sausage1.segments.length; i += step1) {
+          const seg1 = sausage1.segments[i];
+
+          for (let j = 0; j < sausage2.segments.length; j += step2) {
+            const seg2 = sausage2.segments[j];
+
+            const dx = seg1.x - seg2.x;
+            const dy = seg1.y - seg2.y;
+            const dz = seg1.z - seg2.z;
+            const distSq = dx * dx + dy * dy + dz * dz;
+            const collisionDistSq = collisionDistance * collisionDistance;
+
+            if (distSq < collisionDistSq) {
+              const distance = Math.sqrt(distSq);
+
+              // Calculate velocities
+              const vel1Sq =
+                Math.pow(seg1.x - seg1.prevX, 2) +
+                Math.pow(seg1.y - seg1.prevY, 2) +
+                Math.pow(seg1.z - seg1.prevZ, 2);
+              const vel2Sq =
+                Math.pow(seg2.x - seg2.prevX, 2) +
+                Math.pow(seg2.y - seg2.prevY, 2) +
+                Math.pow(seg2.z - seg2.prevZ, 2);
+
+              // Apply damage
+              if (vel1Sq > vel2Sq) {
+                const vel1 = Math.sqrt(vel1Sq);
+                const vel2 = Math.sqrt(vel2Sq);
+                const velocityDiff = vel1 - vel2;
+
+                if (velocityDiff > MIN_VELOCITY_FOR_DAMAGE) {
+                  const rawDamage =
+                    (velocityDiff - MIN_VELOCITY_FOR_DAMAGE) * 0.5;
+                  const damage = Math.min(rawDamage, MAX_DAMAGE_PER_HIT);
+                  const actualDamage = damage * sausage1.damageMultiplier;
+                  sausage2.takeDamage(actualDamage, seg2.x, seg2.y, seg2.z);
+                }
+              } else if (vel2Sq > vel1Sq) {
+                const vel1 = Math.sqrt(vel1Sq);
+                const vel2 = Math.sqrt(vel2Sq);
+                const velocityDiff = vel2 - vel1;
+
+                if (velocityDiff > MIN_VELOCITY_FOR_DAMAGE) {
+                  const rawDamage =
+                    (velocityDiff - MIN_VELOCITY_FOR_DAMAGE) * 0.5;
+                  const damage = Math.min(rawDamage, MAX_DAMAGE_PER_HIT);
+                  const actualDamage = damage * sausage2.damageMultiplier;
+                  sausage1.takeDamage(actualDamage, seg1.x, seg1.y, seg1.z);
+                }
+              }
+
+              // Collision response
+              const overlap = collisionDistance - distance;
+              if (distance > 0) {
+                const pushForce = overlap * 1.2;
+                const normX = dx / distance;
+                const normY = dy / distance;
+                const normZ = dz / distance;
+
+                const totalMass = sausage1.weight + sausage2.weight;
+                const mass1Ratio = sausage2.weight / totalMass;
+                const mass2Ratio = sausage1.weight / totalMass;
+
+                if (i === 0) {
+                  seg2.x -= normX * pushForce * 1.5;
+                  seg2.y -= normY * pushForce * 1.5;
+                  seg2.z -= normZ * pushForce * 1.5;
+                  seg2.prevX = seg2.x - (seg2.x - seg2.prevX) * 0.3;
+                  seg2.prevY = seg2.y - (seg2.y - seg2.prevY) * 0.3;
+                  seg2.prevZ = seg2.z - (seg2.z - seg2.prevZ) * 0.3;
+                } else if (j === 0) {
+                  seg1.x += normX * pushForce * 1.5;
+                  seg1.y += normY * pushForce * 1.5;
+                  seg1.z += normZ * pushForce * 1.5;
+                  seg1.prevX = seg1.x - (seg1.x - seg1.prevX) * 0.3;
+                  seg1.prevY = seg1.y - (seg1.y - seg1.prevY) * 0.3;
+                  seg1.prevZ = seg1.z - (seg1.z - seg1.prevZ) * 0.3;
+                } else {
+                  seg1.x += normX * pushForce * mass1Ratio;
+                  seg1.y += normY * pushForce * mass1Ratio;
+                  seg1.z += normZ * pushForce * mass1Ratio;
+                  seg2.x -= normX * pushForce * mass2Ratio;
+                  seg2.y -= normY * pushForce * mass2Ratio;
+                  seg2.z -= normZ * pushForce * mass2Ratio;
+
+                  seg1.prevX = seg1.x - (seg1.x - seg1.prevX) * 0.4;
+                  seg1.prevY = seg1.y - (seg1.y - seg1.prevY) * 0.4;
+                  seg1.prevZ = seg1.z - (seg1.z - seg1.prevZ) * 0.4;
+                  seg2.prevX = seg2.x - (seg2.x - seg2.prevX) * 0.4;
+                  seg2.prevY = seg2.y - (seg2.y - seg2.prevY) * 0.4;
+                  seg2.prevZ = seg2.z - (seg2.z - seg2.prevZ) * 0.4;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      function checkProjectileCollisions() {
+        projectiles = projectiles.filter((proj) => {
+          const target = proj.owner === player1 ? player2 : player1;
+
+          for (let seg of target.segments) {
+            const dx = proj.position.x - seg.x;
+            const dy = proj.position.y - seg.y;
+            const dz = proj.position.z - seg.z;
+
+            if (dx * dx + dy * dy + dz * dz < 4) {
+              target.takeDamage(8, seg.x, seg.y, seg.z);
+              proj.destroy();
+              return false;
+            }
+          }
+
+          return proj.update();
+        });
+      }
+
+      function updateHealthBars() {
+        const p1Percent = (player1.health / player1.maxHealth) * 100;
+        const p2Percent = (player2.health / player2.maxHealth) * 100;
+
+        document.getElementById("player1Health").style.width = p1Percent + "%";
+        document.getElementById("player2Health").style.width = p2Percent + "%";
+        document.getElementById("player1HealthText").textContent =
+          `${Math.ceil(player1.health)} / ${player1.maxHealth}`;
+        document.getElementById("player2HealthText").textContent =
+          `${Math.ceil(player2.health)} / ${player2.maxHealth}`;
+      }
+
+      function showDamageText(damage, worldX, worldY, worldZ) {
+        // Project 3D position to screen coordinates
+        const vector = new THREE.Vector3(worldX, worldY, worldZ);
+        vector.project(camera);
+
+        const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+
+        const damageElement = document.createElement("div");
+        damageElement.className = "damageText";
+        damageElement.textContent = `-${Math.round(damage)}`;
+        damageElement.style.left = x + "px";
+        damageElement.style.top = y + "px";
+        gameContainer.appendChild(damageElement);
+        setTimeout(() => damageElement.remove(), 1000);
+      }
+
+      function endGame(loser) {
+        gameRunning = false;
+        const winner =
+          loser === player1
+            ? CHARACTERS[player2Character].name
+            : CHARACTERS[player1Character].name;
+        const winnerIcon =
+          loser === player1
+            ? CHARACTERS[player2Character].icon
+            : CHARACTERS[player1Character].icon;
+
+        document.getElementById("winnerText").textContent =
+          winnerIcon + " VICTORY! " + winnerIcon;
+        document.getElementById("winnerSubtext").textContent =
+          winner + " Wins!";
+        document.getElementById("gameOver").style.display = "block";
+      }
+
+      function gameLoop() {
+        if (!gameRunning) return;
+
+        updateTimeScale();
+
+        player1.update();
+        player2.update();
+        checkCollision(player1, player2);
+        checkProjectileCollisions();
+        updateHealthBars();
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(gameLoop);
+      }
+    </script>
+  </body>
+</html>
