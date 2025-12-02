@@ -590,7 +590,7 @@
 
       // Neural Net Config
       const INPUT_SIZE = 10;
-      const HIDDEN_LAYERS = [24, 12];
+      const HIDDEN_LAYERS = [24, 16];
       const OUTPUT_SIZE = 9;
       const LEARNING_RATE = 0.005;
       const DISCOUNT_FACTOR = 0.95;
@@ -599,9 +599,9 @@
       const POLICY_UPDATE_FREQUENCY = 500;
 
       // Curriculum Constants
-      const TOTAL_TRAIN_FRAMES = 80000; // DECREASED from 100,000 to 80,000
-      const TRAIN_STEPS_FSM = 40000; // DECREASED from 50,000 to 40,000
-      const TRAIN_STEPS_SELFPLAY = TOTAL_TRAIN_FRAMES - TRAIN_STEPS_FSM; // 40,000
+      const TOTAL_TRAIN_FRAMES = 100000;
+      const TRAIN_STEPS_FSM = 50000;
+      const TRAIN_STEPS_SELFPLAY = TOTAL_TRAIN_FRAMES - TRAIN_STEPS_FSM;
       const EPOCH_FRAME_COUNT = 10000;
 
       // Responsive Bounds
