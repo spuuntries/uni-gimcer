@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>SOSEJ_DUEL_V3_AI</title>
+    <title>SOSEJ_DUEL_V4_NN</title>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Lexend+Mega:wght@700&display=swap");
 
@@ -200,6 +200,7 @@
         display: none;
         color: #0f0;
         box-shadow: 6px 6px 0 #000;
+        overflow-y: auto;
       }
 
       .q-row {
@@ -214,7 +215,7 @@
         font-weight: bold;
       }
       .q-state {
-        width: 40%;
+        width: 65%;
         overflow: hidden;
         white-space: nowrap;
       }
@@ -226,6 +227,7 @@
       .q-val {
         width: 25%;
         text-align: right;
+        display: none; /* Hide Q-Val in NN Agent view */
       }
 
       /* --- SCREENS --- */
@@ -263,6 +265,17 @@
         backdrop-filter: blur(5px);
         -webkit-backdrop-filter: blur(5px);
         z-index: -1;
+      }
+
+      #training-overlay {
+        background: #000;
+        color: #0f0;
+        font-family: "Space Mono", monospace;
+        justify-content: center;
+      }
+      #training-overlay::before {
+        background: #000;
+        backdrop-filter: none;
       }
 
       h1 {
@@ -327,17 +340,6 @@
       }
 
       /* TRAINING TERMINAL */
-      #training-overlay {
-        background: #000;
-        color: #0f0;
-        font-family: "Space Mono", monospace;
-        justify-content: center;
-      }
-      #training-overlay::before {
-        background: #000;
-        backdrop-filter: none;
-      }
-
       .terminal-box {
         border: 2px solid #0f0;
         padding: 20px;
@@ -468,6 +470,7 @@
       async
       src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"
     ></script>
+    <script src="https://unpkg.com/brain.js"></script>
     <script type="importmap">
       {
         "imports": {
@@ -526,7 +529,7 @@
         </button>
         <div id="brain-panel">
           <div style="margin-bottom: 5px; border-bottom: 1px solid #0f0">
-            STATE | BEST ACT | Q-VAL
+            STATE | Q-VALS
           </div>
           <div id="q-rows"></div>
         </div>
@@ -559,6 +562,12 @@
           id="loading-bar"
           style="margin-top: 20px; width: 0%; height: 20px; background: #0f0"
         ></div>
+        <div
+          id="loss-log"
+          style="margin-top: 10px; font-size: 12px; color: #ff0"
+        >
+          > epoch: 0, loss: 0.000
+        </div>
       </div>
     </div>
 
@@ -578,6 +587,22 @@
       const ITERATIONS = 40;
       const MAX_DAMAGE = 5;
       const I_FRAMES = 1500;
+
+      // Neural Net Config
+      const INPUT_SIZE = 6;
+      const HIDDEN_LAYERS = [24, 12];
+      const OUTPUT_SIZE = 9; // INCREASED FOR SNAP_CHARGE
+      const LEARNING_RATE = 0.005;
+      const DISCOUNT_FACTOR = 0.95;
+
+      // Self-Play Constants
+      const POLICY_UPDATE_FREQUENCY = 500; // How often the opponent's brain is updated with the latest weights
+
+      // Curriculum Constants
+      const TOTAL_TRAIN_FRAMES = 100000; // INCREASED TRAINING TIME
+      const TRAIN_STEPS_FSM = 50000; // 50% FSM
+      const TRAIN_STEPS_SELFPLAY = TOTAL_TRAIN_FRAMES - TRAIN_STEPS_FSM;
+      const EPOCH_FRAME_COUNT = 10000; // INCREASED LOGGING EPOCH SIZE
 
       // Responsive Bounds
       let WORLD_WIDTH = 36;
@@ -639,13 +664,37 @@
         },
       };
 
+      // Expanded Action Space (9 actions)
+      const ACTION_NAMES = [
+        "CHARGE_FAR", // 0
+        "RETREAT_FAR", // 1
+        "HIGH_SWING", // 2
+        "LOW_SWING", // 3
+        "MID_CENTER", // 4
+        "AGGRO_PUSH", // 5
+        "JUMP_BAIT", // 6
+        "SHOOT_MID", // 7
+        "SNAP_CHARGE", // 8 (NEW: High-velocity close charge)
+      ];
+      const ACTION_TARGETS = [
+        { x: -2, y: -4 }, // 0: CHARGE_FAR (Deeply aggressive)
+        { x: 18, y: -4 }, // 1: RETREAT_FAR (Max distance retreat)
+        { x: 8, y: 4 }, // 2: HIGH_SWING (High position for offense/defense)
+        { x: 8, y: -8 }, // 3: LOW_SWING (Low position for offense/defense)
+        { x: 5, y: -4 }, // 4: MID_CENTER (Neutral, safe mid-range)
+        { x: 1, y: -6 }, // 5: AGGRO_PUSH (Very close, low guard, high collision)
+        { x: 10, y: 8 }, // 6: JUMP_BAIT (High jump for dodging or positioning)
+        { x: 10, y: -4 }, // 7: SHOOT_MID (Mid-range stance for projectile users)
+        { x: -5, y: -7 }, // 8: SNAP_CHARGE (Extremely aggressive, low to the ground)
+      ];
+
       // --- Game State ---
       let gameActive = false;
       let p1Health = 100,
         p1MaxHealth = 100;
       let p2Health = 100,
         p2MaxHealth = 100;
-      let playerSausage, botSausage, qAgent;
+      let playerSausage, botSausage, nnAgent;
       let projectiles = [];
       let isMobile = false;
       let slowMoTimer = 0; // Timer for slow motion effect
@@ -704,7 +753,7 @@
       gridHelper.rotation.x = 0;
       scene.add(gridHelper);
 
-      // --- Joystick Logic ---
+      // --- Joystick Logic (Unchanged) ---
       function initJoystick() {
         const zone = document.getElementById("joystick-zone");
         const knob = document.getElementById("joystick-knob");
@@ -779,11 +828,21 @@
             .getElementById("joystick-zone")
             .getBoundingClientRect();
           const t = e.changedTouches[0];
-          if (t.clientX < zone.left || t.clientY < zone.top) {
+          // Check if touch is not inside the joystick zone
+          if (!isTouchInRect(t, zone)) {
             playerSausage.shoot();
           }
         }
       });
+
+      function isTouchInRect(touch, rect) {
+        return (
+          touch.clientX >= rect.left &&
+          touch.clientX <= rect.right &&
+          touch.clientY >= rect.top &&
+          touch.clientY <= rect.bottom
+        );
+      }
 
       // Desktop Shooting Support
       window.addEventListener("mousedown", (e) => {
@@ -792,7 +851,7 @@
         }
       });
 
-      // --- Particle System ---
+      // --- Particle System (Unchanged) ---
       function createParticle(pos, color, size) {
         const geo = new THREE.BoxGeometry(size, size, size);
         const mat = new THREE.MeshBasicMaterial({
@@ -827,7 +886,7 @@
         anim();
       }
 
-      // --- Physics Engine ---
+      // --- Physics Engine (Unchanged) ---
       class Point {
         constructor(x, y, z) {
           this.pos = new THREE.Vector3(x, y, 0);
@@ -879,7 +938,7 @@
         }
       }
 
-      // --- Entities ---
+      // --- Entities (Unchanged) ---
       class Sausage {
         constructor(scene, config, startX, isBot = false) {
           this.points = [];
@@ -899,33 +958,20 @@
               new Stick(this.points[i], this.points[i + 1], SEGMENT_LENGTH)
             );
           }
-          for (let i = 0; i < this.points.length - 2; i++) {
+          // Cross-links for structural integrity (slightly reduced for performance)
+          for (let i = 0; i < this.points.length - 2; i += 2) {
             this.sticks.push(
               new Stick(this.points[i], this.points[i + 2], SEGMENT_LENGTH * 2)
             );
           }
+          // Stability links for the base (essential for control)
           const handleLen = Math.floor(config.segments * 0.4);
           for (let i = 0; i < handleLen; i++) {
             for (let j = i + 1; j < handleLen; j++) {
-              const dist = Math.abs(j - i) * SEGMENT_LENGTH;
+              const dist = SEGMENT_LENGTH * (j - i);
               this.sticks.push(new Stick(this.points[i], this.points[j], dist));
             }
           }
-          const base = this.points[0];
-          this.sticks.push(
-            new Stick(
-              base,
-              this.points[Math.floor(config.segments * 0.6)],
-              SEGMENT_LENGTH * Math.floor(config.segments * 0.6)
-            )
-          );
-          this.sticks.push(
-            new Stick(
-              base,
-              this.points[Math.floor(config.segments * 0.8)],
-              SEGMENT_LENGTH * Math.floor(config.segments * 0.8)
-            )
-          );
 
           const curve = new THREE.CatmullRomCurve3(
             this.points.map((p) => p.pos)
@@ -1010,13 +1056,17 @@
             }
           }, 100);
 
+          let reward = 0;
           if (this.isBot) {
             p2Health -= actualDamage;
-            if (qAgent) qAgent.recordReward(-20);
+            // Increased penalty for bot getting hit
+            reward = -100;
           } else {
             p1Health -= actualDamage;
-            if (qAgent) qAgent.recordReward(40);
+            // INCREASED REWARD FOR PLAYER HITTING BOT
+            reward = 120; // Bumped up from 80 to 120
           }
+          if (nnAgent) nnAgent.recordReward(reward);
 
           // Camera Shake
           const shake = Math.min(actualDamage * 0.2, 1.5);
@@ -1040,6 +1090,7 @@
           base.pinned = true;
 
           this.points.forEach((p) => p.update());
+          // 2 Iterations for stick constraint satisfaction
           for (let k = 0; k < 2; k++) this.sticks.forEach((s) => s.update());
 
           // Particle Emitter Logic
@@ -1067,83 +1118,91 @@
         }
       }
 
-      // --- ENHANCED Q-LEARNING AI ---
-      const ACTION_NAMES = [
-        "CHARGE",
-        "RETREAT",
-        "HIGH GUARD",
-        "LOW CUT",
-        "CENTER",
-      ];
-
-      class QAgent {
+      // --- DEEP Q-NETWORK AGENT (Using brain.js) ---
+      class NNAgent {
         constructor(bot, opp) {
           this.bot = bot;
           this.opp = opp;
-          this.qTable = {};
-          this.learningRate = 0.1;
-          this.discountFactor = 0.9;
-          this.epsilon = 0.1;
-          this.age = 0;
+
+          // Initialize brain.js Neural Network
+          this.nn = new brain.NeuralNetwork({
+            hiddenLayers: HIDDEN_LAYERS,
+            learningRate: LEARNING_RATE,
+          });
+
+          // FIX: Explicitly train with dummy data to force brain.js initialization,
+          // making the network "runnable" immediately.
+          this.nn.train(
+            [
+              {
+                input: new Array(INPUT_SIZE).fill(0),
+                output: new Array(OUTPUT_SIZE).fill(0),
+              },
+            ],
+            {
+              iterations: 1,
+              errorThresh: 0.0001,
+              log: false,
+            }
+          );
+
+          this.epsilon = 1.0; // Start with high exploration
+          // NOTE: Decay is managed in the bootstrap loop now to handle phase changes.
+          this.epsilonMin = 0.05;
 
           this.lastState = null;
           this.lastAction = null;
           this.currentReward = 0;
           this.isTraining = true;
-          // Actions: Advance, Retreat, Up-Attack, Down-Attack, Center
-          this.actions = [
-            { x: -2, y: -4 },
-            { x: 15, y: -4 },
-            { x: 8, y: 4 },
-            { x: 8, y: -8 },
-            { x: 5, y: -4 },
-          ];
+          this.epoch = 0;
         }
 
+        // State representation: 6 normalized floats
         getState() {
-          const b = this.bot.getHeadPos(),
-            p = this.opp.getHeadPos();
-          const dx = p.x - b.x,
-            dy = p.y - b.y,
-            dist = Math.sqrt(dx * dx + dy * dy);
+          const b = this.bot.getHeadPos();
+          const p = this.opp.getHeadPos();
+          const bBase = this.bot.points[0].pos;
 
-          let xStr = "ALIGNED";
-          if (dx < -2) xStr = "LEFT";
-          else if (dx > 2) xStr = "RIGHT";
-          let yStr = "LEVEL";
-          if (dy < -2) yStr = "BELOW";
-          else if (dy > 2) yStr = "ABOVE";
-          let dStr = "MID";
-          if (dist < 6) dStr = "CLOSE";
-          else if (dist > 12) dStr = "FAR";
+          const dx = p.x - b.x;
+          const dy = p.y - b.y;
+          const dist = b.distanceTo(p);
 
-          return `${xStr}_${yStr}_${dStr}`;
+          // 1. Normalized Relative X (Range: -1 to 1 based on WORLD_WIDTH)
+          const r_x = Math.max(-1, Math.min(1, dx / WORLD_WIDTH));
+          // 2. Normalized Relative Y (Range: -1 to 1 based on WORLD_HEIGHT/2)
+          const r_y = Math.max(-1, Math.min(1, dy / (WORLD_HEIGHT / 2)));
+          // 3. Normalized Distance (Range: 0 to 1 based on WORLD_WIDTH)
+          const r_d = Math.max(0, Math.min(1, dist / WORLD_WIDTH));
+          // 4. Normalized Bot X Position (Range: -1 to 1)
+          const b_x = bBase.x / (WORLD_WIDTH / 2);
+          // 5. Player Health Ratio
+          const p_h = p1Health / p1MaxHealth;
+          // 6. Bot Health Ratio
+          const b_h = p2Health / p2MaxHealth;
+
+          return [r_x, r_y, r_d, b_x, p_h, b_h];
         }
 
-        act() {
-          // DYNAMIC EPSILON: Oscillate between 0.05 (Smart) and 0.40 (Crazy)
-          if (this.isTraining) {
-            this.age++;
-            const wave = (Math.sin(this.age * 0.01) + 1) / 2;
-            this.epsilon = 0.05 + wave * 0.35;
-          }
-
+        act(isTestMode = false) {
           const state = this.getState();
+          // Use brain.js run method for forward propagation (prediction)
+          const q_values = Array.from(this.nn.run(state));
           let actionIdx;
 
-          if (!this.qTable[state]) this.qTable[state] = [0, 0, 0, 0, 0];
+          // Epsilon management is handled externally in the training loop
 
           if (this.isTraining && Math.random() < this.epsilon) {
-            actionIdx = Math.floor(Math.random() * this.actions.length);
+            // Epsilon-Greedy: Explore (random action)
+            actionIdx = Math.floor(Math.random() * OUTPUT_SIZE);
           } else {
-            const vals = this.qTable[state];
-            // Add noise to break ties randomly
-            const noisyVals = vals.map((v) => v + Math.random() * 0.01);
-            actionIdx = noisyVals.indexOf(Math.max(...noisyVals));
+            // Exploit (best predicted action)
+            actionIdx = q_values.indexOf(Math.max(...q_values));
           }
 
-          const act = this.actions[actionIdx];
+          // Apply Action (Movement target)
+          const act = ACTION_TARGETS[actionIdx];
           const pBase = this.opp.points[0].pos;
+
           this.bot.targetPos.x = THREE.MathUtils.lerp(
             this.bot.targetPos.x,
             pBase.x + act.x,
@@ -1155,19 +1214,48 @@
             0.12
           );
 
-          if (this.isTraining && this.lastState) {
-            const oldQ = this.qTable[this.lastState][this.lastAction];
-            const maxNextQ = Math.max(...this.qTable[state]);
-            const newQ =
-              oldQ +
-              this.learningRate *
-                (this.currentReward + this.discountFactor * maxNextQ - oldQ);
-            this.qTable[this.lastState][this.lastAction] = newQ;
+          // Training Step
+          if (this.isTraining && this.lastState !== null) {
+            this.train(state, q_values, actionIdx);
           }
 
           this.lastState = state;
           this.lastAction = actionIdx;
-          this.currentReward = -0.2; // Living cost to encourage action
+          this.currentReward = -0.1; // Increased Living cost
+        }
+
+        // Training function (Q-learning update rule using brain.js)
+        train(newState, newQValues, actionIndex) {
+          // 1. Get current Q-values for the action taken in the LAST state
+          const oldQValues = Array.from(this.nn.run(this.lastState));
+
+          // 2. Calculate the TD Target (Target Q-value)
+          // Max predicted Q-value for the NEW state (max_a' Q(s', a'))
+          const maxNextQ = Math.max(...newQValues);
+          // Target Q-value: Reward + Gamma * maxNextQ
+          const targetQ = this.currentReward + DISCOUNT_FACTOR * maxNextQ;
+
+          // 3. Construct the full target vector: copy old Q values, but insert the new target Q for the action taken
+          const target = [...oldQValues];
+          target[this.lastAction] = targetQ; // Only update the Q-value for the action taken
+
+          // 4. Train the network one step towards the target vector
+          const stats = this.nn.train(
+            [
+              {
+                input: this.lastState,
+                output: target,
+              },
+            ],
+            {
+              iterations: 1, // Crucially, only 1 iteration
+              errorThresh: 0.0001,
+              log: false, // Turn off logging
+            }
+          );
+
+          // Return the error/loss for logging purposes
+          return stats.error;
         }
 
         recordReward(r) {
@@ -1175,27 +1263,36 @@
         }
       }
 
-      // --- FSM Teacher for Training ---
-      const FSM = {
+      /**
+       * FSM Teacher Logic (Phase 1)
+       */
+      const FSM_TEACHER = {
         t: 0,
         s: "IDLE",
         update: function (bot, opp) {
           this.t++;
+          // Slower state transition for stability (Phase 1)
           if (this.t > 40) {
             this.t = 0;
             const r = Math.random();
-            this.s = r < 0.5 ? "IDLE" : r < 0.8 ? "ATK" : "DEF";
+            // 50% chance to do something, 50% idle
+            this.s = r < 0.5 ? "IDLE" : r < 0.75 ? "CHARGE" : "HIGH";
           }
+
           let tx = 8,
             ty = -4;
           const pBase = opp.points[0].pos;
-          if (this.s === "ATK") {
-            tx = 0;
-            ty = -2;
-          } else if (this.s === "DEF") {
-            tx = 10;
-            ty = 2;
+
+          if (this.s === "CHARGE") {
+            // Aggressive forward movement
+            tx = THREE.MathUtils.lerp(0, -2, Math.random());
+            ty = THREE.MathUtils.lerp(-4, -6, Math.random());
+          } else if (this.s === "HIGH") {
+            // High attack stance
+            tx = 8;
+            ty = 4;
           }
+
           bot.targetPos.x = THREE.MathUtils.lerp(
             bot.targetPos.x,
             pBase.x + tx,
@@ -1205,7 +1302,60 @@
         },
       };
 
-      // --- UI Logic ---
+      /**
+       * Self-Play Policy Logic (Phase 2)
+       * This function makes the training opponent (tp) move based on the main agent's policy,
+       * but mirrored and using a lagged copy of the network for stable self-play learning.
+       * @param {Sausage} selfBot - The current learning bot (tb)
+       * @param {Sausage} oppBot - The training opponent (tp)
+       * @param {brain.NeuralNetwork} policy - The lagged neural network for the opponent
+       */
+      function selfPlayOpponentAct(selfBot, oppBot, policy) {
+        // Get the state from the OPPONENT'S perspective (needs mirroring/inversion)
+        const b = oppBot.getHeadPos();
+        const p = selfBot.getHeadPos();
+        const bBase = oppBot.points[0].pos;
+
+        const dx = p.x - b.x;
+        const dy = p.y - b.y;
+        const dist = b.distanceTo(p);
+
+        // State mirror:
+        // 1. r_x (Opponent on left, Bot on right: dx is positive. Bot on left, Opponent on right: dx is negative.)
+        const r_x = Math.max(-1, Math.min(1, dx / WORLD_WIDTH));
+        const r_y = Math.max(-1, Math.min(1, dy / (WORLD_HEIGHT / 2)));
+        const r_d = Math.max(0, Math.min(1, dist / WORLD_WIDTH));
+        const b_x = bBase.x / (WORLD_WIDTH / 2); // Opponent's base X pos
+
+        // Health ratios (flipped)
+        const p_h = p2Health / p2MaxHealth; // Opponent's health
+        const b_h = p1Health / p1MaxHealth; // Self-Bot's health
+
+        const state = [r_x, r_y, r_d, b_x, p_h, b_h];
+
+        // Run opponent's policy on the mirrored state
+        const q_values = Array.from(policy.run(state));
+        const actionIdx = q_values.indexOf(Math.max(...q_values));
+
+        // Apply Action (Movement target)
+        const act = ACTION_TARGETS[actionIdx];
+
+        // To ensure the opponent moves toward the learning bot (tb), we target relative to tb's position
+        const tbBase = selfBot.points[0].pos;
+
+        oppBot.targetPos.x = THREE.MathUtils.lerp(
+          oppBot.targetPos.x,
+          tbBase.x + act.x,
+          0.12
+        );
+        oppBot.targetPos.y = THREE.MathUtils.lerp(
+          oppBot.targetPos.y,
+          act.y,
+          0.12
+        );
+      }
+
+      // --- UI Logic (Mostly Unchanged) ---
       const charGrid = document.getElementById("char-grid");
       const startBtn = document.getElementById("start-btn");
       let selectedCharKey = null;
@@ -1214,11 +1364,15 @@
         const card = document.createElement("div");
         card.className = "char-card nb-box";
         card.innerHTML = `
-                <span class="char-icon">${data.icon}</span>
-                <span class="char-name">${data.name}</span>
-                <div class="stat-bar"><div class="stat-val-bar" style="width:${data.responsiveness * 250}%; color:#5e6dff"></div></div>
-                <div class="stat-bar"><div class="stat-val-bar" style="width:${data.damage * 60}%; color:#ff5e5e"></div></div>
-            `;
+            <span class="char-icon">${data.icon}</span>
+            <span class="char-name">${data.name}</span>
+            <div class="stat-bar"><div class="stat-val-bar" style="width:${
+              data.responsiveness * 250
+            }%; color:#5e6dff"></div></div>
+            <div class="stat-bar"><div class="stat-val-bar" style="width:${
+              data.damage * 60
+            }%; color:#ff5e5e"></div></div>
+          `;
         card.onclick = () => {
           document
             .querySelectorAll(".char-card")
@@ -1234,7 +1388,7 @@
         charGrid.appendChild(card);
       });
 
-      // Brain Visualizer Logic
+      // Brain Visualizer Logic (Updated for NN)
       window.toggleBrain = () => {
         const p = document.getElementById("brain-panel");
         p.style.display = p.style.display === "none" ? "block" : "none";
@@ -1244,59 +1398,44 @@
         const panel = document.getElementById("q-rows");
         if (
           document.getElementById("brain-panel").style.display === "none" ||
-          !qAgent
+          !nnAgent
         )
           return;
 
         let html = "";
-        const curState = qAgent.getState();
-        const keys = Object.keys(qAgent.qTable);
 
-        // Show current Epsilon
-        const epsColor =
-          qAgent.epsilon > 0.3
-            ? "#f0f"
-            : qAgent.epsilon < 0.1
-              ? "#0ff"
-              : "#fff";
-        html += `<div style="border-bottom:1px solid #555; padding:5px; color:${epsColor}; text-align:center;">
-                EPSILON: ${qAgent.epsilon.toFixed(2)} (${qAgent.epsilon > 0.25 ? "CHAOS" : "FOCUS"})
+        // --- Display NN Info ---
+        const state = nnAgent.getState();
+        // Use brain.js run method for prediction
+        const q_values_float32 = nnAgent.nn.run(state);
+        const q_values = Array.from(q_values_float32); // Convert to JS array
+        const bestIdx = q_values.indexOf(Math.max(...q_values));
+
+        html += `<div style="border-bottom:1px solid #555; padding:5px; color:#fff; text-align:center;">
+                EPSILON: ${nnAgent.epsilon.toFixed(2)} (${nnAgent.epsilon > 0.3 ? "CHAOS" : "FOCUS"})
             </div>`;
 
-        const fmt = (s) =>
-          s
-            .replace("LEFT", "⬅️")
-            .replace("RIGHT", "➡️")
-            .replace("ALIGNED", "⏺️")
-            .replace("ABOVE", "⬆️")
-            .replace("BELOW", "⬇️")
-            .replace("LEVEL", "⏺️")
-            .replace("CLOSE", "⚔️")
-            .replace("MID", "📏")
-            .replace("FAR", "🔭");
+        // Current State Values
+        html += `<div style="padding: 5px; background: #004400; font-weight: bold; color: white;">
+            STATE [NORM]: R_X: ${state[0].toFixed(2)}, R_Y: ${state[1].toFixed(2)}, DIST: ${state[2].toFixed(2)}
+            </div>`;
 
-        // Show active state first
-        if (qAgent.qTable[curState]) {
-          const vals = qAgent.qTable[curState];
-          const bestIdx = vals.indexOf(Math.max(...vals));
-          html += `<div class="q-row active-state">
-                    <div class="q-state">CUR: ${fmt(curState)}</div>
-                    <div class="q-best-action">${ACTION_NAMES[bestIdx]}</div>
-                    <div class="q-val">${vals[bestIdx].toFixed(1)}</div>
-                </div>`;
+        // Action Q-Values
+        html += `<div style="margin-top: 5px; padding: 5px; border-top: 1px solid #555;">
+            PREDICTED Q-VALUES:
+        </div>`;
+
+        for (let i = 0; i < OUTPUT_SIZE; i++) {
+          const isBest = i === bestIdx;
+          const color = isBest ? "#ff0" : "#0f0";
+          const rowClass = isBest ? "q-row active-state" : "q-row";
+          html += `<div class="${rowClass}">
+                <div class="q-state" style="color:${color}; width: 60%;">${ACTION_NAMES[i]}</div>
+                <div class="q-best-action" style="color:white; font-size: 1.1em;">${q_values[i].toFixed(3)}</div>
+                <div class="q-val"></div>
+            </div>`;
         }
 
-        // Show few others
-        keys.slice(0, 5).forEach((k) => {
-          if (k === curState) return;
-          const vals = qAgent.qTable[k];
-          const bestIdx = vals.indexOf(Math.max(...vals));
-          html += `<div class="q-row">
-                    <div class="q-state">${fmt(k)}</div>
-                    <div class="q-best-action">${ACTION_NAMES[bestIdx]}</div>
-                    <div class="q-val">${vals[bestIdx].toFixed(1)}</div>
-                </div>`;
-        });
         panel.innerHTML = html;
       }
 
@@ -1318,69 +1457,201 @@
         location.reload();
       };
 
-      // --- Training (Bootstrapping) ---
+      // --- Training (Bootstrapping: FSM + Self-Play Curriculum) ---
       async function bootstrap(playerKey) {
         const log = document.getElementById("training-log");
+        const lossLog = document.getElementById("loss-log");
         const keys = Object.keys(CHARACTERS);
         const botC = CHARACTERS[keys[Math.floor(Math.random() * keys.length)]];
         const pC = CHARACTERS[playerKey];
 
         // Temporary Sim Entities
-        const tp = new Sausage(scene, pC, -5, false);
-        const tb = new Sausage(scene, botC, 5, true);
-        const agent = new QAgent(tb, tp);
+        const tp = new Sausage(scene, pC, -5, false); // Opponent
+        const tb = new Sausage(scene, botC, 5, true); // Main Learning Bot
+        const agent = new NNAgent(tb, tp); // Main NNAgent
 
-        // Hide them during training (or move them far away)
-        tp.mesh.position.y = -1000;
-        tb.mesh.position.y = -1000;
+        // Initial hidden state
+        tp.mesh.visible = false;
+        tp.headMesh.visible = false;
+        tp.buttMesh.visible = false;
+        tb.mesh.visible = false;
+        tb.headMesh.visible = false;
+        tb.buttMesh.visible = false;
 
-        const TRAIN_FRAMES = 3000;
         const bar = document.getElementById("loading-bar");
+        let currentFrame = 0;
+        let totalLoss = 0;
+        let lossCount = 0;
+        let epoch = 0;
+        const framesPerEpoch = EPOCH_FRAME_COUNT;
 
-        return new Promise((r) => {
-          let f = 0;
-          function step() {
+        // --- PHASE 1: FSM PRE-TRAINING ---
+        log.innerHTML = `> PHASE 1/2: FSM PRE-TRAINING (${TRAIN_STEPS_FSM} steps)...`;
+        const FSM_DECAY_RATE = 0.9998;
+        agent.epsilon = 1.0; // Start high exploration
+
+        await new Promise((resolve) => {
+          function stepFSM() {
             for (let k = 0; k < 50; k++) {
-              // Fast forward
-              if (f++ > TRAIN_FRAMES) break;
-              FSM.update(tp, tb);
-              agent.act();
-              tp.updatePhysics();
-              tb.updatePhysics();
+              // Fast forward 50 steps per frame
+              if (currentFrame++ >= TRAIN_STEPS_FSM) break;
 
-              // Simple Training Collision Logic (Approximation)
+              // Update Epsilon
+              agent.epsilon = Math.max(
+                agent.epsilonMin,
+                agent.epsilon * FSM_DECAY_RATE
+              );
+
+              // Opponent control: Simple FSM
+              FSM_TEACHER.update(tp, tb);
+
+              // Simulate collision and reward
               const h1 = tp.getHeadPos(),
                 h2 = tb.getHeadPos();
               if (h1.distanceTo(h2) < 2.5) {
-                const v1 = tp.points[0].pos.distanceTo(tp.points[0].oldPos);
-                const v2 = tb.points[0].pos.distanceTo(tb.points[0].oldPos);
-                // Reward if bot moving faster than player at impact
-                agent.recordReward(v2 > v1 ? 20 : -10);
+                const v1 = tp.points[0].pos
+                  .clone()
+                  .sub(tp.points[0].oldPos)
+                  .length();
+                const v2 = tb.points[0].pos
+                  .clone()
+                  .sub(tb.points[0].oldPos)
+                  .length();
+                agent.recordReward(v2 > v1 ? 10 : -10);
+              }
+
+              // Main Bot acts and trains
+              agent.act(false);
+
+              tp.updatePhysics();
+              tb.updatePhysics();
+
+              const state = agent.getState();
+              const q_values = Array.from(agent.nn.run(state));
+              totalLoss += agent.train(state, q_values, agent.lastAction);
+              lossCount++;
+              agent.currentReward = -0.1;
+
+              if (currentFrame % framesPerEpoch === 0) {
+                epoch++;
+                const avgLoss = totalLoss / lossCount;
+                lossLog.innerHTML = `> epoch: ${epoch} (FSM), loss: ${avgLoss.toFixed(5)}, Epsilon: ${agent.epsilon.toFixed(3)}`;
+                totalLoss = 0;
+                lossCount = 0;
+                FSM_TEACHER.t = 0; // Reset FSM periodically
               }
             }
 
-            const pct = Math.round((f / TRAIN_FRAMES) * 100);
+            const pct = Math.round((currentFrame / TOTAL_TRAIN_FRAMES) * 100);
             bar.style.width = pct + "%";
-            if (f % 300 === 0)
-              log.innerHTML = `> TRAINING NEURAL NET... [${pct}%]`;
 
-            if (f <= TRAIN_FRAMES) requestAnimationFrame(step);
-            else {
-              scene.remove(tp.mesh);
-              scene.remove(tp.headMesh);
-              scene.remove(tp.buttMesh);
-              scene.remove(tb.mesh);
-              scene.remove(tb.headMesh);
-              scene.remove(tb.buttMesh);
-              qAgent = agent; // Transfer learned agent
-              r();
-            }
+            if (currentFrame < TRAIN_STEPS_FSM) requestAnimationFrame(stepFSM);
+            else resolve();
           }
-          step();
+          stepFSM();
         });
+
+        // --- PHASE 2: SELF-PLAY REFINEMENT ---
+        log.innerHTML = `> PHASE 2/2: SELF-PLAY REFINEMENT (${TRAIN_STEPS_SELFPLAY} steps)...`;
+
+        // --- Epsilon Curriculum Reset for Phase 2 ---
+        const SELFPLAY_DECAY_RATE = 0.99995;
+        agent.epsilon = 0.5; // Reset to moderate exploration for new target network
+
+        // Initialize Opponent's Policy (Target Network for self-play lag)
+        let opponentPolicyJSON = agent.nn.toJSON();
+        const opponentNet = new brain.NeuralNetwork({
+          hiddenLayers: HIDDEN_LAYERS,
+          learningRate: LEARNING_RATE,
+        });
+        opponentNet.fromJSON(opponentPolicyJSON);
+        let policyUpdateCounter = 0;
+
+        // Reset logging for Phase 2
+        totalLoss = 0;
+        lossCount = 0;
+        epoch = 0;
+
+        await new Promise((resolve) => {
+          function stepSelfPlay() {
+            for (let k = 0; k < 50; k++) {
+              // Fast forward 50 steps per frame
+              if (currentFrame++ > TOTAL_TRAIN_FRAMES) break;
+
+              // Update Epsilon (Slower decay)
+              agent.epsilon = Math.max(
+                agent.epsilonMin,
+                agent.epsilon * SELFPLAY_DECAY_RATE
+              );
+
+              // --- SELF-PLAY: UPDATE OPPONENT POLICY ---
+              if (policyUpdateCounter++ >= POLICY_UPDATE_FREQUENCY) {
+                opponentPolicyJSON = agent.nn.toJSON(); // Clone current weights
+                opponentNet.fromJSON(opponentPolicyJSON); // Update opponent brain
+                policyUpdateCounter = 0;
+              }
+
+              // --- OPPONENT ACTS (Using Lagged Self-Policy) ---
+              selfPlayOpponentAct(tb, tp, opponentNet);
+
+              // Simulate collision and reward
+              const h1 = tp.getHeadPos(),
+                h2 = tb.getHeadPos();
+              if (h1.distanceTo(h2) < 2.5) {
+                const v1 = tp.points[0].pos
+                  .clone()
+                  .sub(tp.points[0].oldPos)
+                  .length();
+                const v2 = tb.points[0].pos
+                  .clone()
+                  .sub(tb.points[0].oldPos)
+                  .length();
+                agent.recordReward(v2 > v1 ? 10 : -10);
+              }
+
+              // --- MAIN BOT ACTS AND TRAINS ---
+              agent.act(false);
+
+              tp.updatePhysics();
+              tb.updatePhysics();
+
+              const state = agent.getState();
+              const q_values = Array.from(agent.nn.run(state));
+              totalLoss += agent.train(state, q_values, agent.lastAction);
+              lossCount++;
+              agent.currentReward = -0.1;
+
+              if (currentFrame % framesPerEpoch === 0) {
+                epoch++;
+                const avgLoss = totalLoss / lossCount;
+                lossLog.innerHTML = `> epoch: ${epoch} (Self-Play), loss: ${avgLoss.toFixed(5)}, Epsilon: ${agent.epsilon.toFixed(3)}`;
+                totalLoss = 0;
+                lossCount = 0;
+              }
+            }
+
+            const pct = Math.round((currentFrame / TOTAL_TRAIN_FRAMES) * 100);
+            bar.style.width = pct + "%";
+
+            if (currentFrame <= TOTAL_TRAIN_FRAMES)
+              requestAnimationFrame(stepSelfPlay);
+            else resolve();
+          }
+          stepSelfPlay();
+        });
+
+        // --- Final Cleanup ---
+        scene.remove(tp.mesh);
+        scene.remove(tp.headMesh);
+        scene.remove(tp.buttMesh);
+        scene.remove(tb.mesh);
+        scene.remove(tb.headMesh);
+        scene.remove(tb.buttMesh);
+        nnAgent = agent; // Transfer learned agent
+        nnAgent.isTraining = false; // Stop initial training
       }
 
-      // --- Game Functions ---
+      // --- Game Functions (Unchanged) ---
       function updateHealthUI() {
         const p1Pct = Math.max(0, (p1Health / p1MaxHealth) * 100);
         const p2Pct = Math.max(0, (p2Health / p2MaxHealth) * 100);
@@ -1421,7 +1692,7 @@
 
       function startGame(playerKey) {
         const pConfig = CHARACTERS[playerKey];
-        const bConfig = qAgent.bot.config; // Use config from training dummy
+        const bConfig = nnAgent.bot.config; // Use config from training dummy
 
         p1MaxHealth = p1Health = pConfig.health;
         p2MaxHealth = p2Health = bConfig.health;
@@ -1434,10 +1705,11 @@
         playerSausage = new Sausage(scene, pConfig, -5, false);
         botSausage = new Sausage(scene, bConfig, 5, true);
 
-        // Re-assign entities to the trained agent
-        qAgent.bot = botSausage;
-        qAgent.opp = playerSausage;
-        qAgent.isTraining = true; // Keep learning!
+        // Re-assign entities to the trained agent and enable in-game learning
+        nnAgent.bot = botSausage;
+        nnAgent.opp = playerSausage;
+        nnAgent.isTraining = true;
+        nnAgent.epsilon = 0.05; // Start player-mode at low exploration for a challenging bot
 
         gameActive = true;
       }
@@ -1500,7 +1772,7 @@
             for (let pt of target.points) {
               if (p.pos.distanceTo(pt.pos) < SAUSAGE_RADIUS + 0.5) {
                 target.takeDamage(4, pt.pos);
-                if (p.ownerIsBot) qAgent.recordReward(10);
+                if (p.ownerIsBot) nnAgent.recordReward(10);
                 p.life = 0;
                 break;
               }
@@ -1516,8 +1788,9 @@
       }
 
       function updateInput() {
+        if (!playerSausage) return;
+
         if (joystick.active) {
-          const rangeX = 14;
           playerSausage.targetPos.x += joystick.dx * 0.8;
           playerSausage.targetPos.y += joystick.dy * 0.8;
         } else {
@@ -1546,7 +1819,14 @@
 
         if (gameActive) {
           updateInput();
-          qAgent.act();
+
+          // In-game training
+          const state = nnAgent.getState();
+          // Use brain.js run method for forward propagation (prediction)
+          const q_values = Array.from(nnAgent.nn.run(state));
+
+          nnAgent.act(true); // Act using exploitation (low epsilon)
+          nnAgent.train(state, q_values, nnAgent.lastAction); // Immediately update Q-value based on actual step reward
 
           let shouldUpdatePhysics = true;
 
@@ -1563,6 +1843,7 @@
             playerSausage.updatePhysics();
             botSausage.updatePhysics();
 
+            // Run collision resolution multiple times for stability (Verlet integration)
             for (let i = 0; i < ITERATIONS; i++) {
               playerSausage.sticks.forEach((s) => s.update());
               botSausage.sticks.forEach((s) => s.update());
