@@ -589,20 +589,20 @@
       const I_FRAMES = 1500;
 
       // Neural Net Config
-      const INPUT_SIZE = 6;
+      const INPUT_SIZE = 10;
       const HIDDEN_LAYERS = [24, 12];
-      const OUTPUT_SIZE = 9; // INCREASED FOR SNAP_CHARGE
+      const OUTPUT_SIZE = 9;
       const LEARNING_RATE = 0.005;
       const DISCOUNT_FACTOR = 0.95;
 
       // Self-Play Constants
-      const POLICY_UPDATE_FREQUENCY = 500; // How often the opponent's brain is updated with the latest weights
+      const POLICY_UPDATE_FREQUENCY = 500;
 
       // Curriculum Constants
-      const TOTAL_TRAIN_FRAMES = 100000; // INCREASED TRAINING TIME
-      const TRAIN_STEPS_FSM = 50000; // 50% FSM
-      const TRAIN_STEPS_SELFPLAY = TOTAL_TRAIN_FRAMES - TRAIN_STEPS_FSM;
-      const EPOCH_FRAME_COUNT = 10000; // INCREASED LOGGING EPOCH SIZE
+      const TOTAL_TRAIN_FRAMES = 80000; // DECREASED from 100,000 to 80,000
+      const TRAIN_STEPS_FSM = 40000; // DECREASED from 50,000 to 40,000
+      const TRAIN_STEPS_SELFPLAY = TOTAL_TRAIN_FRAMES - TRAIN_STEPS_FSM; // 40,000
+      const EPOCH_FRAME_COUNT = 10000;
 
       // Responsive Bounds
       let WORLD_WIDTH = 36;
@@ -1157,30 +1157,45 @@
           this.epoch = 0;
         }
 
-        // State representation: 6 normalized floats
+        // State representation: 10 normalized floats
         getState() {
           const b = this.bot.getHeadPos();
           const p = this.opp.getHeadPos();
-          const bBase = this.bot.points[0].pos;
+          const pButt = this.opp.points[0].pos;
+          const pMidIndex = Math.floor(this.opp.points.length * 0.5);
+          const pMid = this.opp.points[pMidIndex].pos;
 
           const dx = p.x - b.x;
           const dy = p.y - b.y;
-          const dist = b.distanceTo(p);
 
-          // 1. Normalized Relative X (Range: -1 to 1 based on WORLD_WIDTH)
-          const r_x = Math.max(-1, Math.min(1, dx / WORLD_WIDTH));
-          // 2. Normalized Relative Y (Range: -1 to 1 based on WORLD_HEIGHT/2)
-          const r_y = Math.max(-1, Math.min(1, dy / (WORLD_HEIGHT / 2)));
-          // 3. Normalized Distance (Range: 0 to 1 based on WORLD_WIDTH)
-          const r_d = Math.max(0, Math.min(1, dist / WORLD_WIDTH));
-          // 4. Normalized Bot X Position (Range: -1 to 1)
-          const b_x = bBase.x / (WORLD_WIDTH / 2);
-          // 5. Player Health Ratio
-          const p_h = p1Health / p1MaxHealth;
-          // 6. Bot Health Ratio
-          const b_h = p2Health / p2MaxHealth;
+          // Helper to normalize relative coordinate/distance to the world scale
+          const normX = (val) => Math.max(-1, Math.min(1, val / WORLD_WIDTH));
+          const normY = (val) =>
+            Math.max(-1, Math.min(1, val / (WORLD_HEIGHT / 2)));
+          const normDist = (dist) =>
+            Math.max(0, Math.min(1, dist / WORLD_WIDTH));
 
-          return [r_x, r_y, r_d, b_x, p_h, b_h];
+          // Base state features (Position of opponent's head relative to bot's head)
+          const state = [
+            normX(dx), // 0. Head Relative X
+            normY(dy), // 1. Head Relative Y
+            normDist(b.distanceTo(p)), // 2. Head Distance
+            this.bot.points[0].pos.x / (WORLD_WIDTH / 2), // 3. Bot Base X Position
+            p1Health / p1MaxHealth, // 4. Player Health Ratio
+            p2Health / p2MaxHealth, // 5. Bot Health Ratio
+          ];
+
+          // NEW SEGMENT DISTANCE FEATURES
+          // Distance to Opponent's Middle Segment
+          state.push(normDist(b.distanceTo(pMid))); // 6. Mid Dist
+          // Distance to Opponent's Butt Segment
+          state.push(normDist(b.distanceTo(pButt))); // 7. Butt Dist
+          // Relative Y to Butt Segment
+          state.push(normY(pButt.y - b.y)); // 8. Butt Relative Y
+          // Relative Y to Mid Segment
+          state.push(normY(pMid.y - b.y)); // 9. Mid Relative Y
+
+          return state;
         }
 
         act(isTestMode = false) {
@@ -1314,24 +1329,38 @@
         // Get the state from the OPPONENT'S perspective (needs mirroring/inversion)
         const b = oppBot.getHeadPos();
         const p = selfBot.getHeadPos();
-        const bBase = oppBot.points[0].pos;
+        const pButt = selfBot.points[0].pos;
+        const pMidIndex = Math.floor(selfBot.points.length * 0.5);
+        const pMid = selfBot.points[pMidIndex].pos;
 
         const dx = p.x - b.x;
         const dy = p.y - b.y;
-        const dist = b.distanceTo(p);
 
-        // State mirror:
-        // 1. r_x (Opponent on left, Bot on right: dx is positive. Bot on left, Opponent on right: dx is negative.)
-        const r_x = Math.max(-1, Math.min(1, dx / WORLD_WIDTH));
-        const r_y = Math.max(-1, Math.min(1, dy / (WORLD_HEIGHT / 2)));
-        const r_d = Math.max(0, Math.min(1, dist / WORLD_WIDTH));
-        const b_x = bBase.x / (WORLD_WIDTH / 2); // Opponent's base X pos
+        // Helper to normalize relative coordinate/distance to the world scale
+        const normX = (val) => Math.max(-1, Math.min(1, val / WORLD_WIDTH));
+        const normY = (val) =>
+          Math.max(-1, Math.min(1, val / (WORLD_HEIGHT / 2)));
+        const normDist = (dist) => Math.max(0, Math.min(1, dist / WORLD_WIDTH));
 
-        // Health ratios (flipped)
-        const p_h = p2Health / p2MaxHealth; // Opponent's health
-        const b_h = p1Health / p1MaxHealth; // Self-Bot's health
+        // Base state features (Position of opponent's head relative to bot's head)
+        const state = [
+          normX(dx), // 0. Head Relative X
+          normY(dy), // 1. Head Relative Y
+          normDist(b.distanceTo(p)), // 2. Head Distance
+          oppBot.points[0].pos.x / (WORLD_WIDTH / 2), // 3. Opponent Base X Position
+          p2Health / p2MaxHealth, // 4. Opponent Health Ratio
+          p1Health / p1MaxHealth, // 5. Self-Bot Health Ratio
+        ];
 
-        const state = [r_x, r_y, r_d, b_x, p_h, b_h];
+        // NEW SEGMENT DISTANCE FEATURES (from Opponent's perspective, relative to its head 'b')
+        // Distance to Opponent's Middle Segment
+        state.push(normDist(b.distanceTo(pMid))); // 6. Mid Dist
+        // Distance to Opponent's Butt Segment
+        state.push(normDist(b.distanceTo(pButt))); // 7. Butt Dist
+        // Relative Y to Butt Segment
+        state.push(normY(pButt.y - b.y)); // 8. Butt Relative Y
+        // Relative Y to Mid Segment
+        state.push(normY(pMid.y - b.y)); // 9. Mid Relative Y
 
         // Run opponent's policy on the mirrored state
         const q_values = Array.from(policy.run(state));
@@ -1418,6 +1447,7 @@
         // Current State Values
         html += `<div style="padding: 5px; background: #004400; font-weight: bold; color: white;">
             STATE [NORM]: R_X: ${state[0].toFixed(2)}, R_Y: ${state[1].toFixed(2)}, DIST: ${state[2].toFixed(2)}
+            <br>MID_DIST: ${state[6].toFixed(2)}, BUTT_DIST: ${state[7].toFixed(2)}
             </div>`;
 
         // Action Q-Values
