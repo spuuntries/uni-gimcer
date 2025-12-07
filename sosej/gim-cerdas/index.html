@@ -666,6 +666,11 @@
             </div>
             <span id="bgm-label">CLICK TO START AUDIO</span>
           </div>
+          <!-- Volume Slider -->
+          <div style="display:flex; align-items:center; padding: 0 10px; border-left: 2px solid #000;">
+             <span style="font-size:12px; font-weight:bold; margin-right:5px;">VOL</span>
+             <input type="range" id="bgm-vol" min="0" max="1" step="0.05" value="0.2" style="width: 60px;">
+          </div>
           <div class="bgm-upload-trigger" id="bgm-trigger">UPLOAD TRACK 📂</div>
         </div>
       </div>
@@ -728,6 +733,7 @@
         bgmSource: null,
         bgmGain: null,
         bgmEl: null,
+        masterVol: 0.2,
         init: function () {
           if (this.ctx) return;
           window.AudioContext =
@@ -738,6 +744,15 @@
           if (this.ctx && this.ctx.state === "suspended") {
             this.ctx.resume();
           }
+        },
+        setVolume: function(val) {
+            this.masterVol = parseFloat(val);
+            if (this.bgmGain) {
+                this.bgmGain.gain.setValueAtTime(this.masterVol, this.ctx.currentTime);
+            }
+            if (this.bgmEl) {
+                this.bgmEl.volume = this.masterVol;
+            }
         },
         stopCurrentBGM: function () {
           if (this.bgmSource) {
@@ -765,7 +780,7 @@
           this.bgmSource.loop = true;
 
           this.bgmGain = this.ctx.createGain();
-          this.bgmGain.gain.value = 0.2;
+          this.bgmGain.gain.value = this.masterVol;
 
           this.bgmSource.connect(this.bgmGain);
           this.bgmGain.connect(this.ctx.destination);
@@ -782,7 +797,7 @@
           // Use HTML5 Audio for local file robustness (avoids CORS/Fetch on file://)
           this.bgmEl = new Audio(url);
           this.bgmEl.loop = true;
-          this.bgmEl.volume = 0.2;
+          this.bgmEl.volume = this.masterVol;
 
           this.bgmEl
             .play()
@@ -2529,6 +2544,10 @@
           AudioSys.playBGM(file);
         }
       };
+
+      document.getElementById("bgm-vol").addEventListener("input", (e) => {
+          AudioSys.setVolume(e.target.value);
+      });
     </script>
   </body>
 </html>
