@@ -1,20 +1,145 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🌭 Sosej</title>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
+    <title>SOSEJ - MAIN MENU</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Lexend+Mega:wght@700&display=swap");
+
+      :root {
+        --bg-color: #ffdcb6;
+        --main-accent: #ff5e5e; /* Hot Red */
+        --sec-accent: #5e6dff; /* Blue */
+        --border-color: #121212;
+        --shadow-offset: 6px;
+        --border-width: 4px;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        font-family: "Space Mono", monospace;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        color: var(--border-color);
+        user-select: none;
+        -webkit-user-select: none;
+        overflow-x: hidden;
+      }
+
+      h1 {
+        font-family: "Lexend Mega", sans-serif;
+        font-size: clamp(4rem, 15vw, 8rem);
+        text-transform: uppercase;
+        text-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
+        margin: 0 0 3rem 0;
+        text-align: center;
+        line-height: 0.85;
+        letter-spacing: -2px;
+      }
+
+      .menu-container {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        width: 90%;
+        max-width: 450px;
+        z-index: 10;
+      }
+
+      .nb-btn {
+        display: block;
+        background: #fff;
+        color: var(--border-color);
+        border: var(--border-width) solid var(--border-color);
+        box-shadow: var(--shadow-offset) var(--shadow-offset) 0px
+          var(--border-color);
+        padding: 25px;
+        font-family: "Lexend Mega", sans-serif;
+        font-size: clamp(1.2rem, 4vw, 1.8rem);
+        cursor: pointer;
+        text-transform: uppercase;
+        text-decoration: none;
+        text-align: center;
+        transition:
+          transform 0.1s,
+          box-shadow 0.1s,
+          background-color 0.1s;
+        font-weight: 700;
+      }
+
+      .nb-btn:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: calc(var(--shadow-offset) + 2px)
+          calc(var(--shadow-offset) + 2px) 0px var(--border-color);
+        background: var(--sec-accent);
+        color: #fff;
+      }
+
+      .nb-btn:active {
+        transform: translate(var(--shadow-offset), var(--shadow-offset));
+        box-shadow: 0 0 0 transparent;
+      }
+
+      .nb-btn.alt {
+        background: var(--main-accent);
+        color: #fff;
+      }
+      .nb-btn.alt:hover {
+        background: #ff8e8e;
+        color: #000;
+      }
+
+      .footer {
+        margin-top: 4rem;
+        font-size: 0.8rem;
+        font-weight: bold;
+        opacity: 0.7;
+        text-align: center;
+      }
+
+      /* Decorative Elements */
+      .deco-circle {
+        position: absolute;
+        border-radius: 50%;
+        border: var(--border-width) solid var(--border-color);
+        opacity: 0.1;
+        z-index: 0;
+        pointer-events: none;
+      }
+    </style>
   </head>
   <body>
-    <p>
-      For game cerdas, you can check it at
-      <a href="https://gimcer.spuun.art">https://gimcer.spuun.art</a>/ <br />
-      For XR, you can check it at
-      <a href="https://xr.spuun.art">https://xr.spuun.art</a>/
-    </p>
+    <!-- Decorative background elements -->
+    <div
+      class="deco-circle"
+      style="width: 300px; height: 300px; top: -50px; left: -50px; background: var(--main-accent)"
+    ></div>
+    <div
+      class="deco-circle"
+      style="width: 200px; height: 200px; bottom: 20px; right: -20px; background: var(--sec-accent)"
+    ></div>
+
+    <h1>SOSEJ</h1>
+
+    <div class="menu-container">
+      <a href="gim-cerdas/index.html" class="nb-btn">
+        <span style="display: block; font-size: 0.8em; opacity: 0.7">MODE</span>
+        DOJO
+      </a>
+      <a href="realitas-x/index.html" class="nb-btn alt">
+        <span style="display: block; font-size: 0.8em; opacity: 0.7">MODE</span>
+        AR / REALITY
+      </a>
+    </div>
+
+    <div class="footer">Choose your destiny.</div>
   </body>
 </html>
