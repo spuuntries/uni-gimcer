@@ -339,6 +339,27 @@
         background: currentColor;
       }
 
+      /* STAT LEGEND */
+      .stat-legend {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        text-transform: uppercase;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .legend-dot {
+        width: 12px;
+        height: 12px;
+        border: 2px solid var(--border-color);
+        box-shadow: 2px 2px 0 var(--border-color);
+      }
+
       /* TRAINING TERMINAL */
       .terminal-box {
         border: 2px solid #0f0;
@@ -530,15 +551,40 @@
         background: #4a5ae0;
       }
 
+      #mobile-bgm-toggle {
+        display: none;
+      }
+
       /* --- MOBILE RESPONSIVE TWEAKS --- */
       @media (max-width: 768px) {
+        #mobile-bgm-toggle {
+          display: flex; /* Use flexbox for robust centering */
+          align-items: center; /* Center vertically */
+          justify-content: center; /* Center horizontally */
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          z-index: 2005;
+          padding: 0;
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          font-size: 24px;
+
+          /*Force emoji to be white by hiding the glyph and showing its shadow */
+          color: transparent;
+          text-shadow: 0 0 0 white;
+        }
+
         h1 {
           font-size: 2.5rem;
           margin-top: 40px;
+          margin-bottom: 10px;
         }
 
         #character-select {
           justify-content: flex-start;
+          padding-bottom: 20px;
         }
 
         .hud-top {
@@ -558,12 +604,76 @@
         }
         .char-grid {
           gap: 10px;
-          padding-bottom: 160px;
+          padding-bottom: 200px; /*  for scroll clearance */
+        }
+
+        /* Modal Overlay BGM Widget */
+        .bgm-container {
+          display: none; /* Hidden by default */
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.85);
+          backdrop-filter: blur(5px);
+          -webkit-backdrop-filter: blur(5px);
+          z-index: 2010;
+          margin: 0;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .bgm-container.open {
+          display: flex;
+        }
+
+        .bgm-widget {
+          pointer-events: auto;
+          max-width: 90vw;
+          width: 90vw;
+          flex-direction: column;
+          height: auto;
+          padding: 0;
+          position: relative;
+          box-shadow: 0 0 20px rgba(94, 109, 255, 0.5);
+        }
+
+        .bgm-widget .bgm-info,
+        .bgm-widget > div:has(input[type="range"]) {
+          width: 100%;
+          justify-content: center;
+          padding: 15px 0;
+          border-bottom: 1px solid var(--border-color);
+        }
+        .bgm-widget > div:has(input[type="range"]) {
+          border-top: 1px solid var(--border-color);
+        }
+
+        .bgm-upload-trigger {
+          width: 100%;
+          height: 0;
+          padding: 0;
+          transition:
+            height 0.3s ease,
+            padding 0.3s ease,
+            border-top 0.3s ease;
+          border-left: 0;
+          border-top: 0px solid var(--border-color);
+          justify-content: center;
+          overflow: hidden;
+        }
+
+        .bgm-widget:hover .bgm-upload-trigger,
+        .bgm-widget.active .bgm-upload-trigger {
+          height: 60px;
+          padding: 0 10px;
+          border-top: var(--border-width) solid var(--border-color);
         }
 
         #start-btn {
-          bottom: 30px;
-          width: 85%;
+          bottom: 20px;
+          width: 90%;
         }
       }
     </style>
@@ -646,11 +756,22 @@
 
     <!-- SCREENS -->
     <div id="character-select">
+      <button id="mobile-bgm-toggle" class="nb-btn">🎵</button>
       <h1>SOSEJ</h1>
+
+      <div class="stat-legend">
+        <div class="legend-item">
+          <span class="legend-dot" style="background: #5e6dff"></span>SPEED
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background: #ff5e5e"></span>POWER
+        </div>
+      </div>
+
       <div class="char-grid" id="char-grid"></div>
 
       <!-- BGM WIDGET -->
-      <div class="bgm-container">
+      <div class="bgm-container" id="bgm-container">
         <input
           type="file"
           id="bgm-input"
@@ -667,9 +788,26 @@
             <span id="bgm-label">CLICK TO START AUDIO</span>
           </div>
           <!-- Volume Slider -->
-          <div style="display:flex; align-items:center; padding: 0 10px; border-left: 2px solid #000;">
-             <span style="font-size:12px; font-weight:bold; margin-right:5px;">VOL</span>
-             <input type="range" id="bgm-vol" min="0" max="1" step="0.05" value="0.2" style="width: 60px;">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              padding: 0 10px;
+              border-left: 2px solid #000;
+            "
+          >
+            <span style="font-size: 12px; font-weight: bold; margin-right: 5px"
+              >VOL</span
+            >
+            <input
+              type="range"
+              id="bgm-vol"
+              min="0"
+              max="1"
+              step="0.05"
+              value="0.2"
+              style="width: 60px"
+            />
           </div>
           <div class="bgm-upload-trigger" id="bgm-trigger">UPLOAD TRACK 📂</div>
         </div>
@@ -745,14 +883,17 @@
             this.ctx.resume();
           }
         },
-        setVolume: function(val) {
-            this.masterVol = parseFloat(val);
-            if (this.bgmGain) {
-                this.bgmGain.gain.setValueAtTime(this.masterVol, this.ctx.currentTime);
-            }
-            if (this.bgmEl) {
-                this.bgmEl.volume = this.masterVol;
-            }
+        setVolume: function (val) {
+          this.masterVol = parseFloat(val);
+          if (this.bgmGain) {
+            this.bgmGain.gain.setValueAtTime(
+              this.masterVol,
+              this.ctx.currentTime
+            );
+          }
+          if (this.bgmEl) {
+            this.bgmEl.volume = this.masterVol;
+          }
         },
         stopCurrentBGM: function () {
           if (this.bgmSource) {
@@ -2432,7 +2573,8 @@
         if (joystick.active) {
           playerSausage.targetPos.x += joystick.dx * 0.8;
           playerSausage.targetPos.y += joystick.dy * 0.8;
-        } else {
+        } else if (!isMobile) {
+          // Only allow mouse/raycaster movement if NOT mobile
           raycaster.setFromCamera(mouse, camera);
           const target = new THREE.Vector3();
           raycaster.ray.intersectPlane(plane, target);
@@ -2546,8 +2688,52 @@
       };
 
       document.getElementById("bgm-vol").addEventListener("input", (e) => {
-          AudioSys.setVolume(e.target.value);
+        AudioSys.setVolume(e.target.value);
       });
+
+      // Mobile BGM Toggle Logic
+      const mobileToggleBtn = document.getElementById("mobile-bgm-toggle");
+      const bgmContainer = document.getElementById("bgm-container");
+
+      if (mobileToggleBtn && bgmContainer) {
+        mobileToggleBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          bgmContainer.classList.toggle("open");
+        });
+
+        // Close modal when clicking outside the widget
+        bgmContainer.addEventListener("click", (e) => {
+          if (e.target === bgmContainer) {
+            bgmContainer.classList.remove("open");
+          }
+        });
+      }
+
+      // Touch handling for BGM widget expansion on mobile
+      const bgmWidget = document.querySelector(".bgm-widget");
+      if (bgmWidget) {
+        bgmWidget.addEventListener(
+          "touchstart",
+          function (e) {
+            e.stopPropagation(); // Prevent other touch events from interfering
+            bgmWidget.classList.toggle("active");
+          },
+          { passive: true }
+        );
+
+        document.addEventListener(
+          "touchstart",
+          function (e) {
+            if (
+              !bgmWidget.contains(e.target) &&
+              !mobileToggleBtn.contains(e.target)
+            ) {
+              bgmWidget.classList.remove("active");
+            }
+          },
+          { passive: true }
+        );
+      }
     </script>
   </body>
 </html>
