@@ -1069,7 +1069,7 @@
 
       // --- Scene Setup ---
       const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x1a1a1a);
+      scene.background = new THREE.Color(0xf0f8ff);
 
       const camera = new THREE.PerspectiveCamera(
         60,
@@ -1097,13 +1097,256 @@
       dirLight.castShadow = true;
       dirLight.shadow.mapSize.width = 2048;
       dirLight.shadow.mapSize.height = 2048;
+      // Expand shadow camera frustum to cover the whole kitchen
+      dirLight.shadow.camera.left = -50;
+      dirLight.shadow.camera.right = 50;
+      dirLight.shadow.camera.top = 50;
+      dirLight.shadow.camera.bottom = -50;
+      dirLight.shadow.camera.near = 0.5;
+      dirLight.shadow.camera.far = 100;
       scene.add(dirLight);
 
-      // Floor Grid
-      const gridHelper = new THREE.GridHelper(100, 100, 0x333333, 0x111111);
-      gridHelper.position.y = -8;
-      gridHelper.rotation.x = 0;
-      scene.add(gridHelper);
+      // --- Kitchen Environment ---
+      function createCheckerTexture() {
+        const size = 512;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = "#e0e0e0";
+        const numTiles = 4;
+        const tileSize = size / numTiles;
+        for (let i = 0; i < numTiles; i++) {
+          for (let j = 0; j < numTiles; j++) {
+            if ((i + j) % 2 === 0) {
+              ctx.fillRect(i * tileSize, j * tileSize, tileSize, tileSize);
+            }
+          }
+        }
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.magFilter = THREE.NearestFilter;
+        tex.repeat.set(20, 20);
+        return tex;
+      }
+
+      function setupKitchenEnvironment() {
+        // Floor
+        const floorGeo = new THREE.PlaneGeometry(200, 200);
+        const floorMat = new THREE.MeshStandardMaterial({
+          map: createCheckerTexture(),
+          roughness: 0.1,
+          metalness: 0.0,
+        });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -7.8;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Back Wall (Tiled)
+        const wallGeo = new THREE.PlaneGeometry(200, 60);
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0xdcedc8 });
+        const wall = new THREE.Mesh(wallGeo, wallMat);
+        wall.position.z = -15;
+        wall.position.y = 10;
+        wall.receiveShadow = true;
+        scene.add(wall);
+
+        // Countertop Block
+        const counterGeo = new THREE.BoxGeometry(200, 8, 10);
+        const counterMat = new THREE.MeshStandardMaterial({ color: 0x8d6e63 });
+        const counter = new THREE.Mesh(counterGeo, counterMat);
+        counter.position.set(0, -9, -15); // Base of the wall
+        counter.receiveShadow = true;
+        counter.castShadow = true;
+        scene.add(counter);
+
+        // --- Detailed Fridge ---
+        const fridgeGroup = new THREE.Group();
+        fridgeGroup.position.set(-25, 4, -12);
+
+        // Main Body
+        const fridgeBodyGeo = new THREE.BoxGeometry(10, 24, 8);
+        const fridgeMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          roughness: 0.2,
+          metalness: 0.1,
+        });
+        const fridgeBody = new THREE.Mesh(fridgeBodyGeo, fridgeMat);
+        fridgeBody.castShadow = true;
+        fridgeBody.receiveShadow = true;
+        fridgeGroup.add(fridgeBody);
+
+        // Freezer Crack
+        const lineGeo = new THREE.BoxGeometry(10.2, 0.2, 8.2);
+        const lineMesh = new THREE.Mesh(
+          lineGeo,
+          new THREE.MeshBasicMaterial({ color: 0xcccccc })
+        );
+        lineMesh.position.y = 4;
+        fridgeGroup.add(lineMesh);
+
+        // Handles
+        const handleGeo = new THREE.BoxGeometry(0.5, 4, 0.5);
+        const handleMat = new THREE.MeshStandardMaterial({
+          color: 0xc0c0c0,
+          metalness: 0.8,
+          roughness: 0.2,
+        });
+
+        const handleTop = new THREE.Mesh(handleGeo, handleMat);
+        handleTop.position.set(3.5, 7, 4.2);
+        fridgeGroup.add(handleTop);
+
+        const handleBot = new THREE.Mesh(handleGeo, handleMat);
+        handleBot.position.set(3.5, 1, 4.2);
+        fridgeGroup.add(handleBot);
+
+        scene.add(fridgeGroup);
+
+        // --- Detailed Stove ---
+        const stoveGroup = new THREE.Group();
+        stoveGroup.position.set(25, -2, -12);
+
+        // Main Body
+        const stoveGeo = new THREE.BoxGeometry(10, 12, 8);
+        const stoveMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+        const stove = new THREE.Mesh(stoveGeo, stoveMat);
+        stove.castShadow = true;
+        stoveGroup.add(stove);
+
+        // Burners (4 cylinders)
+        const burnerGeo = new THREE.CylinderGeometry(1.5, 1.5, 0.2, 16);
+        const burnerMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+        const positions = [
+          [-2.5, -2],
+          [2.5, -2],
+          [-2.5, 2],
+          [2.5, 2],
+        ];
+        positions.forEach((pos) => {
+          const b = new THREE.Mesh(burnerGeo, burnerMat);
+          b.position.set(pos[0], 6.1, pos[1]);
+          stoveGroup.add(b);
+          // Red hot coil center
+          const coil = new THREE.Mesh(
+            new THREE.CylinderGeometry(1, 1, 0.22, 16),
+            new THREE.MeshBasicMaterial({ color: 0x330000 })
+          );
+          coil.position.set(pos[0], 6.1, pos[1]);
+          stoveGroup.add(coil);
+        });
+
+        // Oven Door Window
+        const windowGeo = new THREE.PlaneGeometry(7, 5);
+        const windowMat = new THREE.MeshStandardMaterial({
+          color: 0x111111,
+          roughness: 0.1,
+          metalness: 0.5,
+        });
+        const ovenWindow = new THREE.Mesh(windowGeo, windowMat);
+        ovenWindow.position.set(0, -1, 4.1);
+        stoveGroup.add(ovenWindow);
+
+        // Knobs Panel
+        const panelGeo = new THREE.BoxGeometry(10, 2, 8.2);
+        const panel = new THREE.Mesh(
+          panelGeo,
+          new THREE.MeshStandardMaterial({ color: 0x333333 })
+        );
+        panel.position.set(0, 4, 0);
+        stoveGroup.add(panel);
+
+        // Knobs
+        const knobGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.5, 8);
+        const knobMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+        for (let k = 0; k < 4; k++) {
+          const knob = new THREE.Mesh(knobGeo, knobMat);
+          knob.rotation.x = Math.PI / 2;
+          knob.position.set(-3 + k * 2, 4, 4.3);
+          stoveGroup.add(knob);
+        }
+
+        scene.add(stoveGroup);
+
+        // --- Detailed Knife Rack ---
+        const rackGroup = new THREE.Group();
+        rackGroup.position.set(0, 5, -14.5);
+
+        // Magnet Strip
+        const rackGeo = new THREE.BoxGeometry(12, 1, 0.5);
+        const rackMat = new THREE.MeshStandardMaterial({
+          color: 0x555555,
+          metalness: 0.7,
+          roughness: 0.2,
+        });
+        const rack = new THREE.Mesh(rackGeo, rackMat);
+        rackGroup.add(rack);
+
+        // Knives
+        const bladeMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          metalness: 0.8,
+          roughness: 0.2,
+        });
+        const handleKGeo = new THREE.BoxGeometry(0.8, 1.8, 0.3);
+        const handleKMat = new THREE.MeshStandardMaterial({ color: 0x3e2723 });
+
+        // Knife 1 (Chef Knife)
+        const k1 = new THREE.Group();
+
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0);
+        shape.lineTo(1.2, 0);
+        shape.lineTo(0, 4.5);
+        shape.lineTo(0, 0);
+
+        const extrudeSettings = { depth: 0.05, bevelEnabled: false };
+        const bladeGeo1 = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        const blade1 = new THREE.Mesh(bladeGeo1, bladeMat);
+        blade1.position.x = -0.6;
+        blade1.position.y = 0.9;
+        blade1.position.z = -0.025;
+        k1.add(blade1);
+
+        const h1 = new THREE.Mesh(handleKGeo, handleKMat);
+        h1.position.y = 0;
+        k1.add(h1);
+
+        k1.position.set(-3, 0, 0.3);
+        k1.rotation.z = 0.2;
+        rackGroup.add(k1);
+
+        // Knife 2 (Cleaver)
+        const k2 = new THREE.Group();
+        const cleaverGeo = new THREE.BoxGeometry(2, 3, 0.05);
+        const cleaverBlade = new THREE.Mesh(cleaverGeo, bladeMat);
+        cleaverBlade.position.y = 1.0;
+        k2.add(cleaverBlade);
+
+        const h2 = new THREE.Mesh(handleKGeo, handleKMat);
+        h2.position.y = -0.5;
+        k2.add(h2);
+
+        k2.position.set(2, 0.5, 0.3);
+        k2.rotation.z = -0.1;
+        rackGroup.add(k2);
+
+        scene.add(rackGroup);
+
+        // --- Cutting Board ---
+        const boardGeo = new THREE.BoxGeometry(6, 0.5, 4);
+        const boardMat = new THREE.MeshStandardMaterial({ color: 0xd7ccc8 });
+        const board = new THREE.Mesh(boardGeo, boardMat);
+        board.position.set(-10, -4.7, -12); // On top of counter
+        scene.add(board);
+      }
+
+      setupKitchenEnvironment();
 
       // --- Joystick Logic ---
       function initJoystick() {
