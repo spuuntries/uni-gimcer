@@ -2663,7 +2663,9 @@
 
       // --- BGM Logic ---
       function tryStartBGM() {
-        AudioSys.playBGMFromUrl("Pixelated%20Dreams.mp3");
+        AudioSys.playBGMFromUrl(
+          window.location.href + "/Pixelated%20Dreams.mp3"
+        );
         // tbh idek if this works, this assumes ur browser doesnt block it, but usually default is it does so aksjdbakjsd
       }
 
