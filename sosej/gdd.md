@@ -6,7 +6,7 @@ _"In Sosej, everyone's a wiener." 🌭_
 **Genre:** Physics-Based Fighting Game  
 **Platform:** Web, Mobile-Ready  
 **Target Audience:** Casual gamers, ages 10+  
-**Prototype:** [https://gimcer.spuun.art/](https://gimcer.spuun.art/)
+**Prototype:** [https://sosej.spuun.art/](https://sosej.spuun.art/)
 
 ---
 
@@ -296,6 +296,10 @@ An AI-powered training environment where players face progressively skilled oppo
 **AI Training Approach:**
 
 ![flowchart](./gdd-assets/aiflow.png)
+
+in more detail w.r.t. the loops:
+
+![flowchart](./gdd-assets/actflow.png)
 
 **Difficulty Tiers:**
 
