@@ -295,25 +295,7 @@ An AI-powered training environment where players face progressively skilled oppo
 
 **AI Training Approach:**
 
-```
-Method: Deep Q-Network (DQN) or similar Q-learning variant
-Training Input States:
-  - Player position & velocity
-  - Player segment positions
-  - Distance to opponent
-  - Current momentum vectors
-  - Health differential
-
-Action Space:
-  - Position adjustments (discretized grid)
-  - Movement patterns (aggressive/defensive/neutral)
-
-Reward Function:
-  - +1.0 for successful hit
-  - +0.5 for building momentum without being hit
-  - -1.0 for taking damage
-  - -0.2 for passive play (encourages engagement)
-```
+![flowchart](./gdd-assets/aiflow.png)
 
 **Difficulty Tiers:**
 
